@@ -104,6 +104,36 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
+			.setName("Minimap marker width")
+			.setDesc("Scale the dashed markers (100% is the default).")
+			.addSlider((s) =>
+				s
+					.setLimits(50, 200, 10)
+					.setValue(this.plugin.settings.minimapWidthScale)
+					.setDynamicTooltip()
+					.onChange(async (v) => {
+						this.plugin.settings.minimapWidthScale = v;
+						await this.plugin.saveAndRefresh();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName("Minimap vertical scale")
+			.setDesc(
+				"Scale marker thickness and spacing to make the minimap shorter or taller (100% is the default size).",
+			)
+			.addSlider((s) =>
+				s
+					.setLimits(50, 200, 10)
+					.setValue(this.plugin.settings.minimapVerticalScale)
+					.setDynamicTooltip()
+					.onChange(async (v) => {
+						this.plugin.settings.minimapVerticalScale = v;
+						await this.plugin.saveAndRefresh();
+					}),
+			);
+
+		new Setting(containerEl)
 			.setName("Show tasks in minimap")
 			.setDesc(
 				"Show the open-task count on the edge of the note, next to the dashed markers. Notes with tasks but no headings always show it, so the TOC stays reachable.",
@@ -156,6 +186,20 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 					.onChange(async (v) => {
 						this.plugin.settings.closeDelay = v;
 						await this.plugin.saveSettings();
+				}),
+			);
+
+		new Setting(containerEl)
+			.setName("Popover width")
+			.setDesc("Set the width of the TOC popover in pixels (264 is the default).")
+			.addSlider((s) =>
+				s
+					.setLimits(160, 480, 8)
+					.setValue(this.plugin.settings.popoverWidth)
+					.setDynamicTooltip()
+					.onChange(async (v) => {
+						this.plugin.settings.popoverWidth = v;
+						await this.plugin.saveAndRefresh();
 					}),
 			);
 

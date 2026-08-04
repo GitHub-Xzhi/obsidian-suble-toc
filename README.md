@@ -45,10 +45,13 @@ and optional one-click completion — while the minimap stays focused on structu
 | Show multiple lines | On | Wrap long rows; when off, rows are single-line and hovering shows the full text. |
 | Active tab color | *theme* | Background of the selected tab. Reset it to follow the theme. |
 | Show minimap | On | The dashed markers on the edge of the note. |
+| Minimap marker width | 100% | Scale marker length from 50% to 200%; above 100%, higher-level headings grow progressively more. |
+| Minimap vertical scale | 100% | Scale marker thickness and spacing from 50% to 200%. |
 | Show tasks in minimap | On | The open-task badge on the edge. Notes with tasks but no headings always show it. |
 | Side | Right | Which edge the TOC docks on. |
 | Open the popover on | Hover | Hover the minimap, or require a click. |
 | Close delay | 160 ms | Grace period before the popover closes once the mouse leaves it. |
+| Popover width | 264 px | Set the TOC popover width from 160 to 480 pixels. |
 | Smooth scroll | On | Animate the scroll when navigating. |
 | Scroll to heading on hover | Off | Temporarily scroll to a hovered heading and return on leave; click to navigate normally and stay there. |
 | Minimum / maximum heading level | 1 / 6 | Heading levels to include (tasks are unaffected). |

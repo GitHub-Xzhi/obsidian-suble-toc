@@ -29,6 +29,10 @@ export interface SubtleTocSettings {
 	defaultTab: TocDefaultTab;
 	/** Show the dashed minimap on the edge of the note. */
 	showMinimap: boolean;
+	/** Horizontal scale of the dashed minimap markers, as a percentage. */
+	minimapWidthScale: number;
+	/** Vertical scale of marker thickness and spacing, as a percentage. */
+	minimapVerticalScale: number;
 	/** Show the open-task badge on the edge, next to the dashed minimap. */
 	showTasksInMinimap: boolean;
 	/** Which edge of the note to dock the minimap / popover on. */
@@ -37,6 +41,8 @@ export interface SubtleTocSettings {
 	openTrigger: TocTrigger;
 	/** Grace period, in ms, before the popover closes once the mouse leaves it. */
 	closeDelay: number;
+	/** Width of the TOC popover in CSS pixels. */
+	popoverWidth: number;
 	/** Lowest heading level to include (1 = H1). */
 	minLevel: number;
 	/** Highest heading level to include (6 = H6). */
@@ -57,10 +63,13 @@ export const DEFAULT_SETTINGS: SubtleTocSettings = {
 	show: "both",
 	defaultTab: "headings",
 	showMinimap: true,
+	minimapWidthScale: 100,
+	minimapVerticalScale: 100,
 	showTasksInMinimap: true,
 	side: "right",
 	openTrigger: "hover",
 	closeDelay: 160,
+	popoverWidth: 264,
 	minLevel: 1,
 	maxLevel: 6,
 	smoothScroll: true,

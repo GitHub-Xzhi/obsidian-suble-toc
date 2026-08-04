@@ -6,6 +6,8 @@ import type SubtleTocPlugin from "./main";
 type TocTab = "headings" | "tasks";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
+/** Extra hierarchy spread applied only to minimap widths above 100%. */
+const MINIMAP_HIERARCHY_SPREAD = 0.5;
 
 /** Leading list marker + checkbox of a task line, e.g. `- [ ] ` or `1. [ ] `. */
 const TASK_MARKUP = /^\s*(?:[-*+]|\d+[.)])\s+\[.\]\s*/;
@@ -137,7 +139,7 @@ export class TocOverlay {
 		this.buildPopoverChrome();
 		this.bindGroupEvents();
 		this.applySide();
-		this.applyPixelSnap();
+		this.applyMinimapSizing();
 	}
 
 	/**
@@ -145,12 +147,40 @@ export class TocOverlay {
 	 * 2px hairlines render as solid blocks instead of antialiasing to different
 	 * apparent heights under fractional display scaling (e.g. Windows 125%).
 	 */
-	private applyPixelSnap(): void {
+	private applyMinimapSizing(): void {
 		const dpr = window.devicePixelRatio || 1;
 		const snap = (cssPx: number, minDevicePx: number) =>
 			Math.max(minDevicePx, Math.round(cssPx * dpr)) / dpr;
-		this.minimapEl.style.setProperty("--toc-dash-h", `${snap(2, 2)}px`);
-		this.minimapEl.style.setProperty("--toc-gap", `${snap(6, 1)}px`);
+		const widthScale = Math.min(2, Math.max(0.5, this.settings.minimapWidthScale / 100));
+		const verticalScale = Math.min(
+			2,
+			Math.max(0.5, this.settings.minimapVerticalScale / 100),
+		);
+		const width = (cssPx: number, scale = widthScale) =>
+			`${Number((cssPx * scale).toFixed(2))}px`;
+		const levelWidths = [14, 12.4, 10.8, 9.2, 7.6, 6];
+		const extraScale = Math.max(0, widthScale - 1);
+
+		this.minimapEl.style.setProperty("--toc-dash-h", `${snap(2 * verticalScale, 1)}px`);
+		this.minimapEl.style.setProperty("--toc-gap", `${snap(6 * verticalScale, 1)}px`);
+		this.minimapEl.style.setProperty("--toc-dash-w", width(16));
+		this.minimapEl.style.setProperty("--toc-dash-hover-w", width(22));
+		this.minimapEl.style.setProperty("--toc-dash-active-w", width(14));
+		levelWidths.forEach((base, index) => {
+			// Above 100%, shallow headings receive progressively more growth. H1
+			// gets the largest bonus and H6 keeps the selected base scale.
+			const hierarchy = (levelWidths.length - 1 - index) / (levelWidths.length - 1);
+			const levelScale =
+				widthScale + extraScale * MINIMAP_HIERARCHY_SPREAD * hierarchy;
+			this.minimapEl.style.setProperty(
+				`--toc-level-${index + 1}-w`,
+				width(base, levelScale),
+			);
+			this.minimapEl.style.setProperty(
+				`--toc-active-level-${index + 1}-w`,
+				width(14, levelScale),
+			);
+		});
 	}
 
 	unmount(): void {
@@ -266,6 +296,11 @@ export class TocOverlay {
 		this.rootEl.toggleClass("is-multiline", this.settings.multiLine);
 	}
 
+	private applyPopoverWidth(): void {
+		const width = Math.min(480, Math.max(160, this.settings.popoverWidth));
+		this.rootEl.style.setProperty("--toc-popover-width", `${width}px`);
+	}
+
 	/** Publish the custom active-tab color; removed when unset so the CSS falls
 	 *  back to the theme's own value. */
 	private applyColors(): void {
@@ -284,7 +319,8 @@ export class TocOverlay {
 		this.applySide();
 		this.applyColors();
 		this.applyTextWrap();
-		this.applyPixelSnap();
+		this.applyPopoverWidth();
+		this.applyMinimapSizing();
 		this.rebindScroller();
 
 		const file = this.view.file;
