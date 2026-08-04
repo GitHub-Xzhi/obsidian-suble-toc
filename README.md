@@ -15,6 +15,9 @@ and optional one-click completion — while the minimap stays focused on structu
 - **Edge minimap** of dashes, one per heading, sized by heading level.
 - **Active-heading tracking** in both Editing (Live Preview / Source) and Reading mode.
 - **Click to navigate** with optional smooth scroll — works in both modes.
+- **Preview headings on hover** *(optional)* — moving across heading rows in the
+  popover temporarily scrolls the note without moving the editor cursor. Leaving
+  returns to the previous position; clicking stays at the heading.
 - **Tasks tab** — the note's open tasks (unchecked checkboxes), in document order,
   as a second tab in the popover, with a live open-task count on the tab.
 - **Edge task badge** — a checkbox + count on the edge whenever the note has open
@@ -47,6 +50,7 @@ and optional one-click completion — while the minimap stays focused on structu
 | Open the popover on | Hover | Hover the minimap, or require a click. |
 | Close delay | 160 ms | Grace period before the popover closes once the mouse leaves it. |
 | Smooth scroll | On | Animate the scroll when navigating. |
+| Scroll to heading on hover | Off | Temporarily scroll to a hovered heading and return on leave; click to navigate normally and stay there. |
 | Minimum / maximum heading level | 1 / 6 | Heading levels to include (tasks are unaffected). |
 
 ## Screenshots

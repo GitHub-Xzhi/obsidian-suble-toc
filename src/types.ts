@@ -43,6 +43,8 @@ export interface SubtleTocSettings {
 	maxLevel: number;
 	/** Smoothly animate the scroll when navigating to a heading. */
 	smoothScroll: boolean;
+	/** Temporarily preview a hovered heading, restoring the viewport on leave. */
+	scrollToHeadingOnHover: boolean;
 	/** Show a clickable checkbox on each task row (clicking completes the task). */
 	showTaskCheckboxes: boolean;
 	/** Background of the selected tab as a hex color; empty follows the theme. */
@@ -62,6 +64,7 @@ export const DEFAULT_SETTINGS: SubtleTocSettings = {
 	minLevel: 1,
 	maxLevel: 6,
 	smoothScroll: true,
+	scrollToHeadingOnHover: false,
 	showTaskCheckboxes: false,
 	activeTabBgColor: "",
 	multiLine: true,

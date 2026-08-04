@@ -170,6 +170,18 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
+			.setName("Scroll to heading on hover")
+			.setDesc(
+				"Temporarily scroll to a heading while its TOC row is hovered, then return when the pointer leaves. Click the row to navigate normally and stay there.",
+			)
+			.addToggle((t) =>
+				t.setValue(this.plugin.settings.scrollToHeadingOnHover).onChange(async (v) => {
+					this.plugin.settings.scrollToHeadingOnHover = v;
+					await this.plugin.saveSettings();
+				}),
+			);
+
+		new Setting(containerEl)
 			.setName("Minimum heading level")
 			.setDesc("Lowest heading level to show (1 = H1).")
 			.addSlider((s) =>

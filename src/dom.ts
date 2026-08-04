@@ -162,12 +162,14 @@ export function scrollToTarget(
 	target: NavTarget,
 	smooth: boolean,
 	kind: "heading" | "task" = "heading",
+	commit = true,
 ): void {
 	try {
 		if (view.getMode() === "preview") {
 			const mode = getCurrentModeScroll(view);
 			if (mode?.applyScroll) {
 				const flash = () => {
+					if (!commit) return;
 					if (kind === "task") flashPreviewTask(view, target.text);
 					else flashPreviewHeading(view, target.text);
 				};
@@ -201,16 +203,21 @@ export function scrollToTarget(
 			// animateScrollToLine) because for a far, unrendered line the geometry
 			// starts as an estimate and only firms up as it scrolls into view.
 			animateScrollToLine(cm, pos, 280, () => {
-				cm.dispatch({ selection: { anchor: pos } });
+				if (commit) cm.dispatch({ selection: { anchor: pos } });
 			});
 		} else {
-			cm.dispatch({
-				selection: { anchor: pos },
-				effects: EditorView.scrollIntoView(pos, { y: "start", yMargin: SCROLL_MARGIN }),
+			const scrollEffect = EditorView.scrollIntoView(pos, {
+				y: "start",
+				yMargin: SCROLL_MARGIN,
 			});
+			if (commit) {
+				cm.dispatch({ selection: { anchor: pos }, effects: scrollEffect });
+			} else {
+				cm.dispatch({ effects: scrollEffect });
+			}
 		}
 
-		flashEditorLine(cm, pos);
+		if (commit) flashEditorLine(cm, pos);
 	} catch (e) {
 		console.error("Subtle TOC: failed to scroll to heading", e);
 	}

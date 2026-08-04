@@ -99,10 +99,14 @@ export class TocOverlay {
 	private closeTimer: number | null = null;
 	private rafPending = false;
 	private readonly onScroll = () => this.scheduleActiveUpdate();
-	/** True during a click-driven scroll animation; suppresses the popover list's
+	/** True during TOC-driven scrolling; suppresses the popover list's
 	 *  active-item auto-scroll so it doesn't slide under the cursor. */
 	private navigating = false;
 	private navTimer: number | null = null;
+	/** Scroll position to restore when hover preview ends without a click. */
+	private hoverPreviewOrigin: { scroller: HTMLElement; scrollTop: number } | null = null;
+	/** Deferred restore lets the pointer cross directly between heading rows. */
+	private hoverPreviewRestoreFrame: number | null = null;
 
 	constructor(plugin: SubtleTocPlugin, view: MarkdownView) {
 		this.plugin = plugin;
@@ -150,6 +154,7 @@ export class TocOverlay {
 	}
 
 	unmount(): void {
+		this.restoreHoverPreview(false);
 		this.detachScroller();
 		if (this.closeTimer !== null) window.clearTimeout(this.closeTimer);
 		if (this.navTimer !== null) window.clearTimeout(this.navTimer);
@@ -197,6 +202,7 @@ export class TocOverlay {
 
 	/** Switch the visible list; the tab bar itself only appears when both exist. */
 	private selectTab(tab: TocTab): void {
+		if (tab !== "headings") this.restoreHoverPreview();
 		this.activeTab = tab;
 		this.rootEl.toggleClass("is-tab-headings", tab === "headings");
 		this.rootEl.toggleClass("is-tab-tasks", tab === "tasks");
@@ -272,6 +278,9 @@ export class TocOverlay {
 
 	/** Re-read headings from the metadata cache and rebuild everything. */
 	refresh(): void {
+		// Rebuilding the list removes its hover listeners, so finish any preview
+		// before replacing the rows.
+		this.restoreHoverPreview(false);
 		this.applySide();
 		this.applyColors();
 		this.applyTextWrap();
@@ -397,6 +406,8 @@ export class TocOverlay {
 			// Single-line rows cut long text, so the full version lives in a
 			// tooltip; wrapped rows already show all of it.
 			if (!this.settings.multiLine) item.setAttribute("aria-label", text);
+			item.addEventListener("mouseenter", () => this.previewHeadingOnHover(i));
+			item.addEventListener("mouseleave", () => this.scheduleHoverPreviewRestore());
 			item.addEventListener("click", () => this.navigate(i));
 			return item;
 		});
@@ -508,7 +519,7 @@ export class TocOverlay {
 			const item = this.itemEls[next];
 			if (item) {
 				item.addClass("is-active");
-				// Skip while a click is navigating: the active heading sweeps past
+				// Skip while the TOC is navigating: the active heading can sweep past
 				// the intermediate ones as the note scrolls, and auto-scrolling the
 				// list to each would slide it under the cursor.
 				if (this.isOpen && !this.navigating) {
@@ -520,7 +531,7 @@ export class TocOverlay {
 
 	// ---- interactions ------------------------------------------------------
 
-	/** Mark a click-driven scroll in progress so the popover list stays put while
+	/** Mark a TOC-driven scroll in progress so the popover list stays put while
 	 *  the active heading sweeps through the ones between here and the target;
 	 *  otherwise its auto-scroll (see setActive) slides it under the cursor. The
 	 *  window covers the scroll animation plus its trailing scroll events. */
@@ -536,15 +547,71 @@ export class TocOverlay {
 	private navigate(index: number): void {
 		const heading = this.headings[index];
 		if (!heading) return;
+		this.commitHoverPreview();
 		this.beginNavigation();
 		scrollToTarget(this.view, heading, this.settings.smoothScroll);
 		// optimistic highlight; the scroll listener will confirm/correct
 		this.setActive(index);
 	}
 
+	/** Temporarily show a hovered heading without moving the editor cursor or
+	 *  flashing it. Leaving the heading rows restores the original viewport. */
+	private previewHeadingOnHover(index: number): void {
+		if (!this.settings.scrollToHeadingOnHover) return;
+		const heading = this.headings[index];
+		if (!heading) return;
+		this.cancelHoverPreviewRestore();
+		if (!this.hoverPreviewOrigin && this.scroller) {
+			this.hoverPreviewOrigin = {
+				scroller: this.scroller,
+				scrollTop: this.scroller.scrollTop,
+			};
+		}
+		this.beginNavigation();
+		scrollToTarget(this.view, heading, false, "heading", false);
+		this.setActive(index);
+	}
+
+	/** Delay restoration by one frame so moving directly to another heading row
+	 *  continues the same preview instead of briefly jumping back. */
+	private scheduleHoverPreviewRestore(): void {
+		if (!this.hoverPreviewOrigin) return;
+		this.cancelHoverPreviewRestore();
+		this.hoverPreviewRestoreFrame = requestAnimationFrame(() => {
+			this.hoverPreviewRestoreFrame = null;
+			this.restoreHoverPreview();
+		});
+	}
+
+	private cancelHoverPreviewRestore(): void {
+		if (this.hoverPreviewRestoreFrame !== null) {
+			cancelAnimationFrame(this.hoverPreviewRestoreFrame);
+			this.hoverPreviewRestoreFrame = null;
+		}
+	}
+
+	/** A click commits the current navigation, so a later mouseleave must not
+	 *  return to the pre-preview viewport. */
+	private commitHoverPreview(): void {
+		this.cancelHoverPreviewRestore();
+		this.hoverPreviewOrigin = null;
+	}
+
+	private restoreHoverPreview(updateActive = true): void {
+		this.cancelHoverPreviewRestore();
+		const origin = this.hoverPreviewOrigin;
+		this.hoverPreviewOrigin = null;
+		if (!origin) return;
+
+		const scroller = origin.scroller.isConnected ? origin.scroller : this.scroller;
+		if (scroller) scroller.scrollTop = origin.scrollTop;
+		if (updateActive) this.scheduleActiveUpdate();
+	}
+
 	private navigateTask(index: number): void {
 		const task = this.tasks[index];
 		if (!task) return;
+		this.commitHoverPreview();
 		this.beginNavigation();
 		// Same scroll/flow as headings (incl. is-flashing); no active highlight.
 		scrollToTarget(this.view, task, this.settings.smoothScroll, "task");
@@ -577,6 +644,7 @@ export class TocOverlay {
 
 	close(): void {
 		if (!this.isOpen) return;
+		this.restoreHoverPreview(false);
 		this.isOpen = false;
 		this.rootEl.removeClass("is-open");
 		this.itemEls.forEach((el) => el.removeClass("is-peek"));
