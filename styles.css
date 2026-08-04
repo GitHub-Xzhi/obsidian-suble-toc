@@ -77,7 +77,7 @@
 .subtle-toc-dash {
 	/* never let flexbox shrink the bars — that rounds 2px to 1px unevenly */
 	flex: 0 0 auto;
-	/* height is pinned to whole device pixels from JS (see applyPixelSnap) */
+	/* height is pinned to whole device pixels from JS (see applyMinimapSizing) */
 	height: var(--toc-dash-h, 2px);
 	width: var(--toc-dash-w, 16px);
 	/* square ends + solid color so the 2px hairline antialiases uniformly
