@@ -142,9 +142,30 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 					(this.plugin.settings as unknown as Record<string, unknown>)[key] =
 						Array.isArray(def) ? [...def] : def;
 					await this.plugin.saveAndRefresh();
-					this.display();
+					this.displayPreservingScroll();
 				}),
 		);
+	}
+
+	private displayPreservingScroll(): void {
+		const scrollEl = this.getScrollContainer();
+		const scrollTop = scrollEl.scrollTop;
+		this.display();
+		requestAnimationFrame(() => {
+			scrollEl.scrollTop = scrollTop;
+		});
+	}
+
+	private getScrollContainer(): HTMLElement {
+		let el: HTMLElement | null = this.containerEl;
+		while (el) {
+			const style = getComputedStyle(el);
+			if (el.scrollHeight > el.clientHeight && /(auto|scroll)/.test(style.overflowY)) {
+				return el;
+			}
+			el = el.parentElement;
+		}
+		return this.containerEl;
 	}
 
 	private currentLocale!: SettingsLocale;
@@ -248,7 +269,7 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 					.onClick(async () => {
 						this.plugin.settings.activeTabBgColor = "";
 						await this.plugin.saveAndRefresh();
-						this.display();
+						this.displayPreservingScroll();
 					}),
 			);
 
@@ -545,7 +566,7 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 					.onClick(async () => {
 						this.plugin.settings.headingColors[idx] = DEFAULT_SETTINGS.headingColors[idx];
 						await this.plugin.saveAndRefresh();
-						this.display();
+						this.displayPreservingScroll();
 					}),
 			);
 		}
