@@ -749,6 +749,17 @@ export class TocOverlay {
 
 			const text = h.text || t.untitled;
 			item.createSpan({ cls: "subtle-toc-item-text", text });
+
+			// Level badge (H1-H6) on the right side
+			if (this.settings.showLevelBadges) {
+				const badge = item.createSpan({
+					cls: "subtle-toc-level-badge",
+					text: `H${h.level}`,
+				});
+				const color = this.settings.headingColors[h.level - 1] || "";
+				if (color) badge.style.setProperty("--badge-color", color);
+			}
+
 			// Single-line rows cut long text, so the full version lives in a
 			// tooltip; wrapped rows already show all of it.
 			if (!this.settings.multiLine) item.setAttribute("aria-label", text);

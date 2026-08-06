@@ -394,6 +394,20 @@
 	font-weight: var(--font-semibold, 600);
 }
 
+/* Level badge (H1-H6) on the right side of heading items */
+.subtle-toc-level-badge {
+	flex: 0 0 auto;
+	margin-left: auto;
+	padding: 0 5px;
+	border-radius: 3px;
+	font-size: var(--font-ui-smaller, 11px);
+	font-weight: var(--font-semibold, 600);
+	line-height: 1.5;
+	color: var(--badge-color, var(--text-muted));
+	background: color-mix(in srgb, var(--badge-color, var(--text-muted)) 15%, transparent);
+	user-select: none;
+}
+
 /* ---- task rows (optional checkbox + strike-through on completion) --------- */
 
 .subtle-toc-task-item {

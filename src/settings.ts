@@ -37,6 +37,8 @@ interface SettingsLocale {
 	scrollOnHover: [string, string];
 	minLevel: [string, string];
 	maxLevel: [string, string];
+	showLevelBadges: [string, string];
+	headingColorLabel: string;
 	headings: string;
 	tasks: string;
 	reset: string;
@@ -71,6 +73,8 @@ const EN: SettingsLocale = {
 	scrollOnHover: ["Scroll to heading on hover", "Temporarily scroll to a heading while its TOC row is hovered, then return when the pointer leaves. Click the row to navigate normally and stay there."],
 	minLevel: ["Minimum heading level", "Lowest heading level to show (1 = H1)."],
 	maxLevel: ["Maximum heading level", "Highest heading level to show (6 = H6)."],
+	showLevelBadges: ["Show level badges", "Show H1-H6 level badges on the right side of each heading."],
+	headingColorLabel: "H{n} badge color",
 	headings: "Headings",
 	tasks: "Tasks",
 	reset: "Reset to default",
@@ -105,6 +109,8 @@ const ZH: SettingsLocale = {
 	scrollOnHover: ["悬停时滚动到标题", "当 TOC 行被悬停时临时滚动到对应标题，指针离开后返回。点击该行正常导航并停留在那里。"],
 	minLevel: ["最小标题级别", "显示的最低标题级别（1 = H1）。"],
 	maxLevel: ["最大标题级别", "显示的最高标题级别（6 = H6）。"],
+	showLevelBadges: ["显示级别徽标", "在每个标题右侧显示 H1-H6 级别徽标。"],
+	headingColorLabel: "H{n} 徽标颜色",
 	headings: "标题",
 	tasks: "任务",
 	reset: "恢复默认值",
@@ -133,7 +139,9 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 				.setIcon("rotate-ccw")
 				.setTooltip(this.currentLocale.reset)
 				.onClick(async () => {
-					(this.plugin.settings as unknown as Record<string, unknown>)[key] = DEFAULT_SETTINGS[key];
+					const def = DEFAULT_SETTINGS[key];
+					(this.plugin.settings as unknown as Record<string, unknown>)[key] =
+						Array.isArray(def) ? [...def] : def;
 					await this.plugin.saveAndRefresh();
 					if (refreshDisplay) this.display();
 				}),
@@ -498,5 +506,42 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 					}),
 			);
 		this.addResetBtn(maxSetting, "maxLevel");
+
+		// -- Show level badges -------------------------------------------------
+		const badgeSetting = new Setting(containerEl)
+			.setName(t.showLevelBadges[0])
+			.setDesc(t.showLevelBadges[1])
+			.addToggle((toggle) =>
+				toggle.setValue(this.plugin.settings.showLevelBadges).onChange(async (v) => {
+					this.plugin.settings.showLevelBadges = v;
+					await this.plugin.saveAndRefresh();
+				}),
+			);
+		this.addResetBtn(badgeSetting, "showLevelBadges");
+
+		// -- Heading level colors (H1-H6) -------------------------------------
+		for (let level = 1; level <= 6; level++) {
+			const idx = level - 1;
+			const colorSetting = new Setting(containerEl)
+				.setName(t.headingColorLabel.replace("{n}", String(level)))
+				.addColorPicker((c) =>
+					c
+						.setValue(this.plugin.settings.headingColors[idx] || "#888888")
+						.onChange(async (v) => {
+							this.plugin.settings.headingColors[idx] = v;
+							await this.plugin.saveAndRefresh();
+						}),
+				);
+			colorSetting.addExtraButton((b) =>
+				b
+					.setIcon("rotate-ccw")
+					.setTooltip(t.reset)
+					.onClick(async () => {
+						this.plugin.settings.headingColors[idx] = DEFAULT_SETTINGS.headingColors[idx];
+						await this.plugin.saveAndRefresh();
+						this.display();
+					}),
+			);
+		}
 	}
 }
