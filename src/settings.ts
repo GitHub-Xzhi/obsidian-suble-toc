@@ -1,5 +1,5 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
-import { TocDefaultTab, TocLanguage, TocShow } from "./types";
+import { DEFAULT_SETTINGS, TocDefaultTab, TocLanguage, TocShow } from "./types";
 import type SubtleTocPlugin from "./main";
 
 /** Only where the picker starts while the color is unset — a neutral gray, since
@@ -39,6 +39,7 @@ interface SettingsLocale {
 	maxLevel: [string, string];
 	headings: string;
 	tasks: string;
+	reset: string;
 }
 
 const EN: SettingsLocale = {
@@ -72,6 +73,7 @@ const EN: SettingsLocale = {
 	maxLevel: ["Maximum heading level", "Highest heading level to show (6 = H6)."],
 	headings: "Headings",
 	tasks: "Tasks",
+	reset: "Reset to default",
 };
 
 const ZH: SettingsLocale = {
@@ -105,6 +107,7 @@ const ZH: SettingsLocale = {
 	maxLevel: ["最大标题级别", "显示的最高标题级别（6 = H6）。"],
 	headings: "标题",
 	tasks: "任务",
+	reset: "恢复默认值",
 };
 
 function getSettingsLocale(lang: string): SettingsLocale {
@@ -119,12 +122,34 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 		this.plugin = plugin;
 	}
 
+	/** Add a reset-to-default button to a setting. */
+	private addResetBtn(
+		setting: Setting,
+		key: keyof typeof DEFAULT_SETTINGS,
+		refreshDisplay = false,
+	): Setting {
+		return setting.addExtraButton((b) =>
+			b
+				.setIcon("rotate-ccw")
+				.setTooltip(this.currentLocale.reset)
+				.onClick(async () => {
+					(this.plugin.settings as unknown as Record<string, unknown>)[key] = DEFAULT_SETTINGS[key];
+					await this.plugin.saveAndRefresh();
+					if (refreshDisplay) this.display();
+				}),
+		);
+	}
+
+	private currentLocale!: SettingsLocale;
+
 	display(): void {
 		const { containerEl } = this;
 		containerEl.empty();
 		const t = getSettingsLocale(this.plugin.settings.language);
+		this.currentLocale = t;
 
-		new Setting(containerEl)
+		// -- Language (always re-renders on change) ----------------------------
+		const langSetting = new Setting(containerEl)
 			.setName("Language / 语言")
 			.setDesc("界面语言 / UI language for the TOC panel and settings.")
 			.addDropdown((d) =>
@@ -138,8 +163,10 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 						this.display();
 					}),
 			);
+		this.addResetBtn(langSetting, "language", true);
 
-		new Setting(containerEl)
+		// -- Show --------------------------------------------------------------
+		const showSetting = new Setting(containerEl)
 			.setName(t.show[0])
 			.setDesc(t.show[1])
 			.addDropdown((d) =>
@@ -153,8 +180,10 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 						await this.plugin.saveAndRefresh();
 					}),
 			);
+		this.addResetBtn(showSetting, "show");
 
-		new Setting(containerEl)
+		// -- Default tab -------------------------------------------------------
+		const tabSetting = new Setting(containerEl)
 			.setName(t.defaultTab[0])
 			.setDesc(t.defaultTab[1])
 			.addDropdown((d) =>
@@ -167,8 +196,10 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 						await this.plugin.saveAndRefresh();
 					}),
 			);
+		this.addResetBtn(tabSetting, "defaultTab");
 
-		new Setting(containerEl)
+		// -- Show task checkboxes -----------------------------------------------
+		const taskCbSetting = new Setting(containerEl)
 			.setName(t.showTaskCheckboxes[0])
 			.setDesc(t.showTaskCheckboxes[1])
 			.addToggle((toggle) =>
@@ -177,8 +208,10 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 					await this.plugin.saveAndRefresh();
 				}),
 			);
+		this.addResetBtn(taskCbSetting, "showTaskCheckboxes");
 
-		new Setting(containerEl)
+		// -- Show multiple lines -----------------------------------------------
+		const multiLineSetting = new Setting(containerEl)
 			.setName(t.multiLine[0])
 			.setDesc(t.multiLine[1])
 			.addToggle((toggle) =>
@@ -187,7 +220,9 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 					await this.plugin.saveAndRefresh();
 				}),
 			);
+		this.addResetBtn(multiLineSetting, "multiLine");
 
+		// -- Active tab color (already has its own reset button) ---------------
 		new Setting(containerEl)
 			.setName(t.activeTabColor[0])
 			.setDesc(t.activeTabColor[1])
@@ -210,7 +245,8 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 					}),
 			);
 
-		new Setting(containerEl)
+		// -- Show minimap ------------------------------------------------------
+		const minimapSetting = new Setting(containerEl)
 			.setName(t.showMinimap[0])
 			.setDesc(t.showMinimap[1])
 			.addToggle((toggle) =>
@@ -219,8 +255,10 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 					await this.plugin.saveAndRefresh();
 				}),
 			);
+		this.addResetBtn(minimapSetting, "showMinimap");
 
-		new Setting(containerEl)
+		// -- Minimap marker width ----------------------------------------------
+		const mmWidthSetting = new Setting(containerEl)
 			.setName(t.minimapWidth[0])
 			.setDesc(t.minimapWidth[1])
 			.addSlider((s) =>
@@ -233,8 +271,10 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 						await this.plugin.saveAndRefresh();
 					}),
 			);
+		this.addResetBtn(mmWidthSetting, "minimapWidthScale");
 
-		new Setting(containerEl)
+		// -- Minimap vertical scale --------------------------------------------
+		const mmVertSetting = new Setting(containerEl)
 			.setName(t.minimapVertical[0])
 			.setDesc(t.minimapVertical[1])
 			.addSlider((s) =>
@@ -247,8 +287,10 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 						await this.plugin.saveAndRefresh();
 					}),
 			);
+		this.addResetBtn(mmVertSetting, "minimapVerticalScale");
 
-		new Setting(containerEl)
+		// -- Show tasks in minimap ---------------------------------------------
+		const tasksMmSetting = new Setting(containerEl)
 			.setName(t.showTasksMinimap[0])
 			.setDesc(t.showTasksMinimap[1])
 			.addToggle((toggle) =>
@@ -257,8 +299,10 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 					await this.plugin.saveAndRefresh();
 				}),
 			);
+		this.addResetBtn(tasksMmSetting, "showTasksInMinimap");
 
-		new Setting(containerEl)
+		// -- Side --------------------------------------------------------------
+		const sideSetting = new Setting(containerEl)
 			.setName(t.side[0])
 			.setDesc(t.side[1])
 			.addDropdown((d) =>
@@ -271,8 +315,10 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 						await this.plugin.saveAndRefresh();
 					}),
 			);
+		this.addResetBtn(sideSetting, "side");
 
-		new Setting(containerEl)
+		// -- Open trigger ------------------------------------------------------
+		const triggerSetting = new Setting(containerEl)
 			.setName(t.openTrigger[0])
 			.setDesc(t.openTrigger[1])
 			.addDropdown((d) =>
@@ -285,8 +331,10 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 						await this.plugin.saveAndRefresh();
 					}),
 			);
+		this.addResetBtn(triggerSetting, "openTrigger");
 
-		new Setting(containerEl)
+		// -- Close delay -------------------------------------------------------
+		const closeSetting = new Setting(containerEl)
 			.setName(t.closeDelay[0])
 			.setDesc(t.closeDelay[1])
 			.addSlider((s) =>
@@ -299,8 +347,10 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					}),
 			);
+		this.addResetBtn(closeSetting, "closeDelay");
 
-		new Setting(containerEl)
+		// -- Popover width -----------------------------------------------------
+		const widthSetting = new Setting(containerEl)
 			.setName(t.popoverWidth[0])
 			.setDesc(t.popoverWidth[1])
 			.addSlider((s) =>
@@ -313,8 +363,10 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 						await this.plugin.saveAndRefresh();
 					}),
 			);
+		this.addResetBtn(widthSetting, "popoverWidth");
 
-		new Setting(containerEl)
+		// -- Panel height ------------------------------------------------------
+		const heightSetting = new Setting(containerEl)
 			.setName(t.panelHeight[0])
 			.setDesc(t.panelHeight[1])
 			.addSlider((s) =>
@@ -327,8 +379,10 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 						await this.plugin.saveAndRefresh();
 					}),
 			);
+		this.addResetBtn(heightSetting, "panelHeight");
 
-		new Setting(containerEl)
+		// -- Panel background opacity ------------------------------------------
+		const bgOpSetting = new Setting(containerEl)
 			.setName(t.panelBgOpacity[0])
 			.setDesc(t.panelBgOpacity[1])
 			.addSlider((s) =>
@@ -341,8 +395,10 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 						await this.plugin.saveAndRefresh();
 					}),
 			);
+		this.addResetBtn(bgOpSetting, "panelBgOpacity");
 
-		new Setting(containerEl)
+		// -- Heading text opacity ----------------------------------------------
+		const hdOpSetting = new Setting(containerEl)
 			.setName(t.headingOpacity[0])
 			.setDesc(t.headingOpacity[1])
 			.addSlider((s) =>
@@ -355,8 +411,10 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 						await this.plugin.saveAndRefresh();
 					}),
 			);
+		this.addResetBtn(hdOpSetting, "headingOpacity");
 
-		new Setting(containerEl)
+		// -- Show toolbar ------------------------------------------------------
+		const toolbarSetting = new Setting(containerEl)
 			.setName(t.showToolbar[0])
 			.setDesc(t.showToolbar[1])
 			.addToggle((toggle) =>
@@ -365,8 +423,10 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 					await this.plugin.saveAndRefresh();
 				}),
 			);
+		this.addResetBtn(toolbarSetting, "showToolbar");
 
-		new Setting(containerEl)
+		// -- Show tabs ---------------------------------------------------------
+		const tabsSetting = new Setting(containerEl)
 			.setName(t.showTabs[0])
 			.setDesc(t.showTabs[1])
 			.addToggle((toggle) =>
@@ -375,8 +435,10 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 					await this.plugin.saveAndRefresh();
 				}),
 			);
+		this.addResetBtn(tabsSetting, "showTabs");
 
-		new Setting(containerEl)
+		// -- Smooth scroll -----------------------------------------------------
+		const scrollSetting = new Setting(containerEl)
 			.setName(t.smoothScroll[0])
 			.setDesc(t.smoothScroll[1])
 			.addToggle((toggle) =>
@@ -385,8 +447,10 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}),
 			);
+		this.addResetBtn(scrollSetting, "smoothScroll");
 
-		new Setting(containerEl)
+		// -- Scroll to heading on hover ----------------------------------------
+		const hoverSetting = new Setting(containerEl)
 			.setName(t.scrollOnHover[0])
 			.setDesc(t.scrollOnHover[1])
 			.addToggle((toggle) =>
@@ -395,8 +459,10 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}),
 			);
+		this.addResetBtn(hoverSetting, "scrollToHeadingOnHover");
 
-		new Setting(containerEl)
+		// -- Minimum heading level ---------------------------------------------
+		const minSetting = new Setting(containerEl)
 			.setName(t.minLevel[0])
 			.setDesc(t.minLevel[1])
 			.addSlider((s) =>
@@ -412,8 +478,10 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 						await this.plugin.saveAndRefresh();
 					}),
 			);
+		this.addResetBtn(minSetting, "minLevel");
 
-		new Setting(containerEl)
+		// -- Maximum heading level ---------------------------------------------
+		const maxSetting = new Setting(containerEl)
 			.setName(t.maxLevel[0])
 			.setDesc(t.maxLevel[1])
 			.addSlider((s) =>
@@ -429,5 +497,6 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 						await this.plugin.saveAndRefresh();
 					}),
 			);
+		this.addResetBtn(maxSetting, "maxLevel");
 	}
 }
