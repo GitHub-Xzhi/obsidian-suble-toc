@@ -521,11 +521,18 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 		// -- Heading level colors (H1-H6) -------------------------------------
 		for (let level = 1; level <= 6; level++) {
 			const idx = level - 1;
+			const rawVal = this.plugin.settings.headingColors[idx] || "#888888";
+			// Normalize: ensure # prefix and 6-digit hex
+			let displayVal = rawVal.trim();
+			if (!displayVal.startsWith("#")) displayVal = "#" + displayVal;
+			if (/^#[0-9a-fA-F]{3}$/.test(displayVal)) {
+				displayVal = "#" + displayVal[1] + displayVal[1] + displayVal[2] + displayVal[2] + displayVal[3] + displayVal[3];
+			}
 			const colorSetting = new Setting(containerEl)
 				.setName(t.headingColorLabel.replace("{n}", String(level)))
 				.addColorPicker((c) =>
 					c
-						.setValue(this.plugin.settings.headingColors[idx] || "#888888")
+						.setValue(displayVal)
 						.onChange(async (v) => {
 							this.plugin.settings.headingColors[idx] = v;
 							await this.plugin.saveAndRefresh();

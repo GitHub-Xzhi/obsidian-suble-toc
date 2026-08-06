@@ -23,6 +23,17 @@ function stripEscapeBackslashes(text: string): string {
 	return text.replace(ESCAPE_RE, "$1");
 }
 
+/** Normalize a color value: ensure # prefix, expand 3-digit hex to 6-digit. */
+function normalizeHexColor(raw: string): string {
+	let c = raw.trim();
+	if (!c) return "";
+	if (!c.startsWith("#")) c = "#" + c;
+	if (/^#[0-9a-fA-F]{3}$/.test(c)) {
+		c = "#" + c[1] + c[1] + c[2] + c[2] + c[3] + c[3];
+	}
+	return c;
+}
+
 /* ---- i18n ---------------------------------------------------------------- */
 
 interface Locale {
@@ -756,7 +767,8 @@ export class TocOverlay {
 					cls: "subtle-toc-level-badge",
 					text: `H${h.level}`,
 				});
-				const color = this.settings.headingColors[h.level - 1] || "";
+				const rawColor = this.settings.headingColors[h.level - 1] || "";
+				const color = normalizeHexColor(rawColor);
 				if (color) badge.style.setProperty("--badge-color", color);
 			}
 
