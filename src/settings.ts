@@ -132,7 +132,6 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 	private addResetBtn(
 		setting: Setting,
 		key: keyof typeof DEFAULT_SETTINGS,
-		refreshDisplay = false,
 	): Setting {
 		return setting.addExtraButton((b) =>
 			b
@@ -143,7 +142,7 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 					(this.plugin.settings as unknown as Record<string, unknown>)[key] =
 						Array.isArray(def) ? [...def] : def;
 					await this.plugin.saveAndRefresh();
-					if (refreshDisplay) this.display();
+					this.display();
 				}),
 		);
 	}
@@ -171,7 +170,7 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 						this.display();
 					}),
 			);
-		this.addResetBtn(langSetting, "language", true);
+		this.addResetBtn(langSetting, "language");
 
 		// -- Show --------------------------------------------------------------
 		const showSetting = new Setting(containerEl)
