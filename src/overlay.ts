@@ -463,7 +463,7 @@ export class TocOverlay {
 
 	private applyOpacity(): void {
 		const bgOpacity = Math.min(100, Math.max(10, this.settings.panelBgOpacity));
-		this.popoverEl.style.setProperty("--toc-panel-opacity", String(bgOpacity / 100));
+		this.popoverEl.style.setProperty("--toc-panel-opacity", `${bgOpacity}%`);
 		const textOpacity = Math.min(100, Math.max(10, this.settings.headingOpacity));
 		this.popoverEl.style.setProperty("--toc-heading-opacity", String(textOpacity / 100));
 	}

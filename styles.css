@@ -204,8 +204,7 @@
 	flex-direction: column;
 	width: var(--toc-popover-width, 264px);
 	max-height: var(--toc-panel-height, 50vh);
-	opacity: var(--toc-panel-opacity, 1);
-	background: var(--background-secondary);
+	background: color-mix(in srgb, var(--background-secondary) var(--toc-panel-opacity, 100%), transparent);
 	border: 1px solid var(--background-modifier-border);
 	border-radius: 12px;
 	box-shadow: var(--shadow-s, 0 8px 24px rgba(0, 0, 0, 0.35));
@@ -225,7 +224,7 @@
 
 .subtle-toc-root.is-open .subtle-toc-popover {
 	pointer-events: auto;
-	opacity: var(--toc-panel-opacity, 1);
+	opacity: 1;
 	transform: translate(0, -50%);
 }
 
@@ -511,7 +510,7 @@
    is-open fade-out that dims the minimap and task badge. */
 .subtle-toc-root.is-pinned .subtle-toc-popover {
 	pointer-events: auto;
-	opacity: var(--toc-panel-opacity, 1);
+	opacity: 1;
 	transform: translate(0, -50%);
 }
 
