@@ -551,8 +551,8 @@
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: 14px;
-	height: 14px;
+	width: 16px;
+	height: 16px;
 	flex: 0 0 auto;
 	cursor: pointer;
 	border-radius: 3px;
@@ -566,10 +566,10 @@
 /* Toggle arrow — drawn on a real span child (not ::after) for reliable clicks */
 .subtle-toc-toggle-arrow {
 	display: block;
-	width: 5px;
-	height: 5px;
-	border-right: 1.5px solid currentColor;
-	border-bottom: 1.5px solid currentColor;
+	width: 6.5px;
+	height: 6.5px;
+	border-right: 1.8px solid currentColor;
+	border-bottom: 1.8px solid currentColor;
 	transform: rotate(-45deg);
 	transition: transform 150ms ease;
 }
