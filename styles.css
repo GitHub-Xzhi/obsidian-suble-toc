@@ -203,7 +203,8 @@
 	display: flex;
 	flex-direction: column;
 	width: var(--toc-popover-width, 264px);
-	max-height: 50vh;
+	max-height: var(--toc-panel-height, 50vh);
+	opacity: var(--toc-panel-opacity, 1);
 	background: var(--background-secondary);
 	border: 1px solid var(--background-modifier-border);
 	border-radius: 12px;
@@ -224,7 +225,7 @@
 
 .subtle-toc-root.is-open .subtle-toc-popover {
 	pointer-events: auto;
-	opacity: 1;
+	opacity: var(--toc-panel-opacity, 1);
 	transform: translate(0, -50%);
 }
 
@@ -248,6 +249,10 @@
 	display: flex;
 	gap: 4px;
 	padding: 8px 8px 2px;
+}
+
+.subtle-toc-tabs.is-hidden {
+	display: none;
 }
 
 .subtle-toc-tab.is-hidden {
@@ -332,6 +337,9 @@
 
 .subtle-toc-item {
 	position: relative;
+	display: flex;
+	align-items: center;
+	gap: 4px;
 	padding: 4px 10px 4px 12px;
 	padding-left: calc(12px + var(--toc-indent, 0) * 12px);
 	border-radius: 6px;
@@ -365,7 +373,8 @@
 }
 
 .subtle-toc-item-text {
-	display: block;
+	flex: 1 1 0;
+	min-width: 0;
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -443,4 +452,130 @@
 	color: var(--text-faint);
 	font-size: var(--font-ui-small);
 	text-align: center;
+}
+
+/* ---- toolbar (pin + expand/collapse buttons) ----------------------------- */
+
+.subtle-toc-toolbar {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 4px 8px 0;
+}
+
+.subtle-toc-toolbar.is-hidden {
+	display: none;
+}
+
+.subtle-toc-toolbar-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 22px;
+	height: 22px;
+	border-radius: 5px;
+	color: var(--text-faint);
+	cursor: pointer;
+	transition: background-color 100ms ease, color 100ms ease;
+	user-select: none;
+}
+
+.subtle-toc-toolbar-btn:hover {
+	background: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+
+.subtle-toc-toolbar-btn .subtle-toc-icon {
+	width: 14px;
+	height: 14px;
+}
+
+/* ---- pinned state -------------------------------------------------------- */
+
+/* Keep the popover fully visible when pinned, overriding the normal
+   is-open fade-out that dims the minimap and task badge. */
+.subtle-toc-root.is-pinned .subtle-toc-popover {
+	pointer-events: auto;
+	opacity: var(--toc-panel-opacity, 1);
+	transform: translate(0, -50%);
+}
+
+.subtle-toc-root.is-pinned .subtle-toc-minimap {
+	opacity: 0.75;
+	pointer-events: auto;
+}
+
+.subtle-toc-root.is-pinned.is-open .subtle-toc-minimap {
+	opacity: 0.75;
+	pointer-events: auto;
+}
+
+.subtle-toc-root.is-pinned .subtle-toc-task-badge {
+	opacity: 0.75;
+	pointer-events: auto;
+}
+
+.subtle-toc-root.is-pinned.is-open .subtle-toc-task-badge {
+	opacity: 0.75;
+	pointer-events: auto;
+}
+
+/* Visual indicator: accent the pin icon when pinned */
+.subtle-toc-root.is-pinned .subtle-toc-toolbar-btn:last-child {
+	color: var(--interactive-accent);
+}
+
+/* ---- per-item tree collapse --------------------------------------------- */
+
+.subtle-toc-item.is-hidden {
+	display: none;
+}
+
+/* Toggle arrow on each parent heading row */
+.subtle-toc-toggle {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 14px;
+	height: 14px;
+	flex: 0 0 auto;
+	cursor: pointer;
+	border-radius: 3px;
+	transition: background-color 100ms ease;
+}
+
+.subtle-toc-toggle:hover {
+	background: var(--background-modifier-hover);
+}
+
+/* Toggle arrow — drawn on a real span child (not ::after) for reliable clicks */
+.subtle-toc-toggle-arrow {
+	display: block;
+	width: 5px;
+	height: 5px;
+	border-right: 1.5px solid currentColor;
+	border-bottom: 1.5px solid currentColor;
+	transform: rotate(-45deg);
+	transition: transform 150ms ease;
+}
+
+.subtle-toc-toggle.is-expanded > .subtle-toc-toggle-arrow {
+	transform: rotate(45deg);
+}
+
+/* Toolbar expand-all button: two separate SVGs, swap via display */
+.subtle-toc-expand-all-btn .collapse-icon {
+	display: block;
+}
+
+.subtle-toc-expand-all-btn .expand-icon {
+	display: none;
+}
+
+.subtle-toc-expand-all-btn.is-all-collapsed .collapse-icon {
+	display: none;
+}
+
+.subtle-toc-expand-all-btn.is-all-collapsed .expand-icon {
+	display: block;
 }

@@ -1,10 +1,112 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
-import { TocDefaultTab, TocShow } from "./types";
+import { TocDefaultTab, TocLanguage, TocShow } from "./types";
 import type SubtleTocPlugin from "./main";
 
 /** Only where the picker starts while the color is unset — a neutral gray, since
  *  the theme's own value can be a translucent rgba() the picker can't show. */
 const FALLBACK_ACTIVE_TAB_BG = "#7a7a7a";
+
+/* ---- i18n for settings tab ----------------------------------------------- */
+
+interface SettingsLocale {
+	language: [string, string];
+	show: [string, string];
+	showOpts: { both: string; headings: string; tasks: string };
+	defaultTab: [string, string];
+	defaultTabOpts: { headings: string; tasks: string };
+	showTaskCheckboxes: [string, string];
+	multiLine: [string, string];
+	activeTabColor: [string, string];
+	activeTabColorReset: string;
+	showMinimap: [string, string];
+	minimapWidth: [string, string];
+	minimapVertical: [string, string];
+	showTasksMinimap: [string, string];
+	side: [string, string];
+	sideOpts: { right: string; left: string };
+	openTrigger: [string, string];
+	openTriggerOpts: { hover: string; click: string };
+	closeDelay: [string, string];
+	popoverWidth: [string, string];
+	panelHeight: [string, string];
+	panelOpacity: [string, string];
+	showToolbar: [string, string];
+	showTabs: [string, string];
+	smoothScroll: [string, string];
+	scrollOnHover: [string, string];
+	minLevel: [string, string];
+	maxLevel: [string, string];
+	headings: string;
+	tasks: string;
+}
+
+const EN: SettingsLocale = {
+	language: ["Language", "UI language for the TOC panel and settings."],
+	show: ["Show", "Which content to surface: headings, open tasks, or both."],
+	showOpts: { both: "Both", headings: "Headings", tasks: "Tasks" },
+	defaultTab: ["Default tab", "Tab shown first in the popover. After that the last-used tab is kept; it always falls back to the tab that has content."],
+	defaultTabOpts: { headings: "Headings", tasks: "Tasks" },
+	showTaskCheckboxes: ["Show task checkboxes", "Add a checkbox to each task in the popover; clicking it completes the task in the note."],
+	multiLine: ["Show multiple lines", "Wrap long headings and tasks over as many lines as they need. When off, each row is cut to a single line and hovering it shows the full text."],
+	activeTabColor: ["Active tab color", "Background of the selected tab in the popover. Reset to follow the theme."],
+	activeTabColorReset: "Use the theme's color",
+	showMinimap: ["Show minimap", "Show the dashed markers along the edge of the note."],
+	minimapWidth: ["Minimap marker width", "Scale the dashed markers (100% is the default)."],
+	minimapVertical: ["Minimap vertical scale", "Scale marker thickness and spacing to make the minimap shorter or taller (100% is the default size)."],
+	showTasksMinimap: ["Show tasks in minimap", "Show the open-task count on the edge of the note, next to the dashed markers. Notes with tasks but no headings always show it, so the TOC stays reachable."],
+	side: ["Side", "Which edge of the note to dock the TOC on."],
+	sideOpts: { right: "Right", left: "Left" },
+	openTrigger: ["Open the popover on", "Hover over the minimap, or require a click to open."],
+	openTriggerOpts: { hover: "Hover", click: "Click" },
+	closeDelay: ["Close delay", "How long the popover waits before closing after the mouse leaves it, in milliseconds. Raise it if it closes on you while switching tabs."],
+	popoverWidth: ["Popover width", "Set the width of the TOC popover in pixels (264 is the default)."],
+	panelHeight: ["Panel height", "Custom max height of the TOC popover in pixels. Set to 0 to use the default (50vh)."],
+	panelOpacity: ["Panel opacity", "Transparency of the TOC popover panel (10-100%). Lower values make the panel more transparent."],
+	showToolbar: ["Show toolbar", "Show the expand/collapse-all button at the top of the TOC panel."],
+	showTabs: ["Show tab bar", "Show the Headings/Tasks tab bar in the TOC panel."],
+	smoothScroll: ["Smooth scroll", "Animate the scroll when navigating to a heading."],
+	scrollOnHover: ["Scroll to heading on hover", "Temporarily scroll to a heading while its TOC row is hovered, then return when the pointer leaves. Click the row to navigate normally and stay there."],
+	minLevel: ["Minimum heading level", "Lowest heading level to show (1 = H1)."],
+	maxLevel: ["Maximum heading level", "Highest heading level to show (6 = H6)."],
+	headings: "Headings",
+	tasks: "Tasks",
+};
+
+const ZH: SettingsLocale = {
+	language: ["语言", "TOC 面板和设置页面的界面语言。"],
+	show: ["显示内容", "选择显示标题、待办任务或两者都显示。"],
+	showOpts: { both: "两者", headings: "标题", tasks: "任务" },
+	defaultTab: ["默认标签页", "弹出面板首先显示的标签页。之后保留上次使用的标签页；始终回退到有内容的标签页。"],
+	defaultTabOpts: { headings: "标题", tasks: "任务" },
+	showTaskCheckboxes: ["显示任务复选框", "为弹出面板中的每个任务添加复选框；点击即可在笔记中完成该任务。"],
+	multiLine: ["显示多行", "长标题和任务按需要自动换行。关闭时，每行截断为单行，悬停时显示完整文本。"],
+	activeTabColor: ["活动标签颜色", "弹出面板中选中标签页的背景色。重置以跟随主题。"],
+	activeTabColorReset: "使用主题颜色",
+	showMinimap: ["显示缩略图", "在笔记边缘显示虚线标记。"],
+	minimapWidth: ["缩略图宽度", "缩放虚线标记宽度（100% 为默认）。"],
+	minimapVertical: ["缩略图高度", "缩放标记厚度和间距，使缩略图更短或更高（100% 为默认大小）。"],
+	showTasksMinimap: ["在缩略图中显示任务", "在笔记边缘显示待办任务数量，位于虚线标记旁边。只有任务没有标题的笔记始终显示，以便 TOC 始终可访问。"],
+	side: ["位置", "TOC 停靠在笔记的哪一侧。"],
+	sideOpts: { right: "右侧", left: "左侧" },
+	openTrigger: ["打开方式", "悬停在缩略图上打开，或需要点击打开。"],
+	openTriggerOpts: { hover: "悬停", click: "点击" },
+	closeDelay: ["关闭延迟", "鼠标离开弹出面板后等待关闭的时间（毫秒）。如果在切换标签时面板关闭太快，请增大此值。"],
+	popoverWidth: ["面板宽度", "设置 TOC 弹出面板的宽度（像素），默认 264。"],
+	panelHeight: ["面板高度", "自定义 TOC 弹出面板的最大高度（像素）。设为 0 使用默认值（50vh）。"],
+	panelOpacity: ["面板透明度", "TOC 弹出面板的透明度（10-100%）。数值越低越透明。"],
+	showToolbar: ["显示工具栏", "在 TOC 面板顶部显示展开/收起全部按钮。"],
+	showTabs: ["显示标签栏", "在 TOC 面板中显示标题/任务标签栏。"],
+	smoothScroll: ["平滑滚动", "导航到标题时使用动画滚动。"],
+	scrollOnHover: ["悬停时滚动到标题", "当 TOC 行被悬停时临时滚动到对应标题，指针离开后返回。点击该行正常导航并停留在那里。"],
+	minLevel: ["最小标题级别", "显示的最低标题级别（1 = H1）。"],
+	maxLevel: ["最大标题级别", "显示的最高标题级别（6 = H6）。"],
+	headings: "标题",
+	tasks: "任务",
+};
+
+function getSettingsLocale(lang: string): SettingsLocale {
+	return lang === "zh" ? ZH : EN;
+}
 
 export class SubtleTocSettingTab extends PluginSettingTab {
 	plugin: SubtleTocPlugin;
@@ -17,15 +119,31 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 	display(): void {
 		const { containerEl } = this;
 		containerEl.empty();
+		const t = getSettingsLocale(this.plugin.settings.language);
 
 		new Setting(containerEl)
-			.setName("Show")
-			.setDesc("Which content to surface: headings, open tasks, or both.")
+			.setName("Language / 语言")
+			.setDesc("界面语言 / UI language for the TOC panel and settings.")
 			.addDropdown((d) =>
 				d
-					.addOption("both", "Both")
-					.addOption("headings", "Headings")
-					.addOption("tasks", "Tasks")
+					.addOption("en", "English")
+					.addOption("zh", "中文")
+					.setValue(this.plugin.settings.language)
+					.onChange(async (v) => {
+						this.plugin.settings.language = v as TocLanguage;
+						await this.plugin.saveAndRefresh();
+						this.display();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName(t.show[0])
+			.setDesc(t.show[1])
+			.addDropdown((d) =>
+				d
+					.addOption("both", t.showOpts.both)
+					.addOption("headings", t.showOpts.headings)
+					.addOption("tasks", t.showOpts.tasks)
 					.setValue(this.plugin.settings.show)
 					.onChange(async (v) => {
 						this.plugin.settings.show = v as TocShow;
@@ -34,14 +152,12 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Default tab")
-			.setDesc(
-				"Tab shown first in the popover. After that the last-used tab is kept; it always falls back to the tab that has content.",
-			)
+			.setName(t.defaultTab[0])
+			.setDesc(t.defaultTab[1])
 			.addDropdown((d) =>
 				d
-					.addOption("headings", "Headings")
-					.addOption("tasks", "Tasks")
+					.addOption("headings", t.defaultTabOpts.headings)
+					.addOption("tasks", t.defaultTabOpts.tasks)
 					.setValue(this.plugin.settings.defaultTab)
 					.onChange(async (v) => {
 						this.plugin.settings.defaultTab = v as TocDefaultTab;
@@ -50,30 +166,28 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Show task checkboxes")
-			.setDesc("Add a checkbox to each task in the popover; clicking it completes the task in the note.")
-			.addToggle((t) =>
-				t.setValue(this.plugin.settings.showTaskCheckboxes).onChange(async (v) => {
+			.setName(t.showTaskCheckboxes[0])
+			.setDesc(t.showTaskCheckboxes[1])
+			.addToggle((toggle) =>
+				toggle.setValue(this.plugin.settings.showTaskCheckboxes).onChange(async (v) => {
 					this.plugin.settings.showTaskCheckboxes = v;
 					await this.plugin.saveAndRefresh();
 				}),
 			);
 
 		new Setting(containerEl)
-			.setName("Show multiple lines")
-			.setDesc(
-				"Wrap long headings and tasks over as many lines as they need. When off, each row is cut to a single line and hovering it shows the full text.",
-			)
-			.addToggle((t) =>
-				t.setValue(this.plugin.settings.multiLine).onChange(async (v) => {
+			.setName(t.multiLine[0])
+			.setDesc(t.multiLine[1])
+			.addToggle((toggle) =>
+				toggle.setValue(this.plugin.settings.multiLine).onChange(async (v) => {
 					this.plugin.settings.multiLine = v;
 					await this.plugin.saveAndRefresh();
 				}),
 			);
 
 		new Setting(containerEl)
-			.setName("Active tab color")
-			.setDesc("Background of the selected tab in the popover. Reset to follow the theme.")
+			.setName(t.activeTabColor[0])
+			.setDesc(t.activeTabColor[1])
 			.addColorPicker((c) =>
 				c
 					.setValue(this.plugin.settings.activeTabBgColor || FALLBACK_ACTIVE_TAB_BG)
@@ -85,7 +199,7 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 			.addExtraButton((b) =>
 				b
 					.setIcon("rotate-ccw")
-					.setTooltip("Use the theme's color")
+					.setTooltip(t.activeTabColorReset)
 					.onClick(async () => {
 						this.plugin.settings.activeTabBgColor = "";
 						await this.plugin.saveAndRefresh();
@@ -94,18 +208,18 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Show minimap")
-			.setDesc("Show the dashed markers along the edge of the note.")
-			.addToggle((t) =>
-				t.setValue(this.plugin.settings.showMinimap).onChange(async (v) => {
+			.setName(t.showMinimap[0])
+			.setDesc(t.showMinimap[1])
+			.addToggle((toggle) =>
+				toggle.setValue(this.plugin.settings.showMinimap).onChange(async (v) => {
 					this.plugin.settings.showMinimap = v;
 					await this.plugin.saveAndRefresh();
 				}),
 			);
 
 		new Setting(containerEl)
-			.setName("Minimap marker width")
-			.setDesc("Scale the dashed markers (100% is the default).")
+			.setName(t.minimapWidth[0])
+			.setDesc(t.minimapWidth[1])
 			.addSlider((s) =>
 				s
 					.setLimits(50, 200, 10)
@@ -118,10 +232,8 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Minimap vertical scale")
-			.setDesc(
-				"Scale marker thickness and spacing to make the minimap shorter or taller (100% is the default size).",
-			)
+			.setName(t.minimapVertical[0])
+			.setDesc(t.minimapVertical[1])
 			.addSlider((s) =>
 				s
 					.setLimits(50, 200, 10)
@@ -134,24 +246,22 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Show tasks in minimap")
-			.setDesc(
-				"Show the open-task count on the edge of the note, next to the dashed markers. Notes with tasks but no headings always show it, so the TOC stays reachable.",
-			)
-			.addToggle((t) =>
-				t.setValue(this.plugin.settings.showTasksInMinimap).onChange(async (v) => {
+			.setName(t.showTasksMinimap[0])
+			.setDesc(t.showTasksMinimap[1])
+			.addToggle((toggle) =>
+				toggle.setValue(this.plugin.settings.showTasksInMinimap).onChange(async (v) => {
 					this.plugin.settings.showTasksInMinimap = v;
 					await this.plugin.saveAndRefresh();
 				}),
 			);
 
 		new Setting(containerEl)
-			.setName("Side")
-			.setDesc("Which edge of the note to dock the TOC on.")
+			.setName(t.side[0])
+			.setDesc(t.side[1])
 			.addDropdown((d) =>
 				d
-					.addOption("right", "Right")
-					.addOption("left", "Left")
+					.addOption("right", t.sideOpts.right)
+					.addOption("left", t.sideOpts.left)
 					.setValue(this.plugin.settings.side)
 					.onChange(async (v) => {
 						this.plugin.settings.side = v as "right" | "left";
@@ -160,12 +270,12 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Open the popover on")
-			.setDesc("Hover over the minimap, or require a click to open.")
+			.setName(t.openTrigger[0])
+			.setDesc(t.openTrigger[1])
 			.addDropdown((d) =>
 				d
-					.addOption("hover", "Hover")
-					.addOption("click", "Click")
+					.addOption("hover", t.openTriggerOpts.hover)
+					.addOption("click", t.openTriggerOpts.click)
 					.setValue(this.plugin.settings.openTrigger)
 					.onChange(async (v) => {
 						this.plugin.settings.openTrigger = v as "hover" | "click";
@@ -174,10 +284,8 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Close delay")
-			.setDesc(
-				"How long the popover waits before closing after the mouse leaves it, in milliseconds. Raise it if it closes on you while switching tabs.",
-			)
+			.setName(t.closeDelay[0])
+			.setDesc(t.closeDelay[1])
 			.addSlider((s) =>
 				s
 					.setLimits(0, 1000, 20)
@@ -186,12 +294,12 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 					.onChange(async (v) => {
 						this.plugin.settings.closeDelay = v;
 						await this.plugin.saveSettings();
-				}),
+					}),
 			);
 
 		new Setting(containerEl)
-			.setName("Popover width")
-			.setDesc("Set the width of the TOC popover in pixels (264 is the default).")
+			.setName(t.popoverWidth[0])
+			.setDesc(t.popoverWidth[1])
 			.addSlider((s) =>
 				s
 					.setLimits(160, 480, 8)
@@ -204,30 +312,76 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Smooth scroll")
-			.setDesc("Animate the scroll when navigating to a heading.")
-			.addToggle((t) =>
-				t.setValue(this.plugin.settings.smoothScroll).onChange(async (v) => {
+			.setName(t.panelHeight[0])
+			.setDesc(t.panelHeight[1])
+			.addSlider((s) =>
+				s
+					.setLimits(0, 2000, 10)
+					.setValue(this.plugin.settings.panelHeight)
+					.setDynamicTooltip()
+					.onChange(async (v) => {
+						this.plugin.settings.panelHeight = v;
+						await this.plugin.saveAndRefresh();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName(t.panelOpacity[0])
+			.setDesc(t.panelOpacity[1])
+			.addSlider((s) =>
+				s
+					.setLimits(10, 100, 5)
+					.setValue(this.plugin.settings.panelOpacity)
+					.setDynamicTooltip()
+					.onChange(async (v) => {
+						this.plugin.settings.panelOpacity = v;
+						await this.plugin.saveAndRefresh();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName(t.showToolbar[0])
+			.setDesc(t.showToolbar[1])
+			.addToggle((toggle) =>
+				toggle.setValue(this.plugin.settings.showToolbar).onChange(async (v) => {
+					this.plugin.settings.showToolbar = v;
+					await this.plugin.saveAndRefresh();
+				}),
+			);
+
+		new Setting(containerEl)
+			.setName(t.showTabs[0])
+			.setDesc(t.showTabs[1])
+			.addToggle((toggle) =>
+				toggle.setValue(this.plugin.settings.showTabs).onChange(async (v) => {
+					this.plugin.settings.showTabs = v;
+					await this.plugin.saveAndRefresh();
+				}),
+			);
+
+		new Setting(containerEl)
+			.setName(t.smoothScroll[0])
+			.setDesc(t.smoothScroll[1])
+			.addToggle((toggle) =>
+				toggle.setValue(this.plugin.settings.smoothScroll).onChange(async (v) => {
 					this.plugin.settings.smoothScroll = v;
 					await this.plugin.saveSettings();
 				}),
 			);
 
 		new Setting(containerEl)
-			.setName("Scroll to heading on hover")
-			.setDesc(
-				"Temporarily scroll to a heading while its TOC row is hovered, then return when the pointer leaves. Click the row to navigate normally and stay there.",
-			)
-			.addToggle((t) =>
-				t.setValue(this.plugin.settings.scrollToHeadingOnHover).onChange(async (v) => {
+			.setName(t.scrollOnHover[0])
+			.setDesc(t.scrollOnHover[1])
+			.addToggle((toggle) =>
+				toggle.setValue(this.plugin.settings.scrollToHeadingOnHover).onChange(async (v) => {
 					this.plugin.settings.scrollToHeadingOnHover = v;
 					await this.plugin.saveSettings();
 				}),
 			);
 
 		new Setting(containerEl)
-			.setName("Minimum heading level")
-			.setDesc("Lowest heading level to show (1 = H1).")
+			.setName(t.minLevel[0])
+			.setDesc(t.minLevel[1])
 			.addSlider((s) =>
 				s
 					.setLimits(1, 6, 1)
@@ -243,8 +397,8 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Maximum heading level")
-			.setDesc("Highest heading level to show (6 = H6).")
+			.setName(t.maxLevel[0])
+			.setDesc(t.maxLevel[1])
 			.addSlider((s) =>
 				s
 					.setLimits(1, 6, 1)

@@ -17,6 +17,62 @@ function stripTaskMarkup(raw: string): string {
 	return raw.replace(TASK_MARKUP, "").trim();
 }
 
+/** Strip markdown-escape backslashes (e.g. `1\.` → `1.`). */
+const ESCAPE_RE = /\\([\s\S])/g;
+function stripEscapeBackslashes(text: string): string {
+	return text.replace(ESCAPE_RE, "$1");
+}
+
+/* ---- i18n ---------------------------------------------------------------- */
+
+interface Locale {
+	headingsTab: string;
+	tasksTab: string;
+	noHeadings: string;
+	noTasks: string;
+	untitled: string;
+	emptyTask: string;
+	openTasks: (n: number) => string;
+	pinTooltip: string;
+	unpinTooltip: string;
+	expandTooltip: string;
+	collapseTooltip: string;
+}
+
+const LOCALE_EN: Locale = {
+	headingsTab: "Headings",
+	tasksTab: "Tasks",
+	noHeadings: "No headings in this note.",
+	noTasks: "No open tasks in this note.",
+	untitled: "(untitled)",
+	emptyTask: "(empty task)",
+	openTasks: (n) => `${n} open task${n === 1 ? "" : "s"}`,
+	pinTooltip: "Pin panel",
+	unpinTooltip: "Unpin panel",
+	expandTooltip: "Expand all",
+	collapseTooltip: "Collapse all",
+};
+
+const LOCALE_ZH: Locale = {
+	headingsTab: "标题",
+	tasksTab: "任务",
+	noHeadings: "此笔记没有标题。",
+	noTasks: "此笔记没有待办任务。",
+	untitled: "（无标题）",
+	emptyTask: "（空任务）",
+	openTasks: (n) => `${n} 个待办任务`,
+	pinTooltip: "固定面板",
+	unpinTooltip: "取消固定",
+	expandTooltip: "展开全部",
+	collapseTooltip: "收起全部",
+};
+
+function getLocale(lang: string): Locale {
+	return lang === "zh" ? LOCALE_ZH : LOCALE_EN;
+}
+
+/* ---- SVG helpers --------------------------------------------------------- */
+
 type SvgChild = [tag: string, attrs: Record<string, string>];
 
 /**
@@ -45,6 +101,16 @@ function createIcon(parent: HTMLElement, children: SvgChild[]): void {
 	parent.appendChild(svg);
 }
 
+/** Replace the children of an existing icon SVG element. */
+function setIconChildren(svg: SVGSVGElement, children: SvgChild[]): void {
+	while (svg.firstChild) svg.removeChild(svg.firstChild);
+	for (const [tag, childAttrs] of children) {
+		const node = document.createElementNS(SVG_NS, tag);
+		for (const [k, v] of Object.entries(childAttrs)) node.setAttribute(k, v);
+		svg.appendChild(node);
+	}
+}
+
 /** Lucide "square-check". */
 function createCheckboxIcon(parent: HTMLElement): void {
 	createIcon(parent, [
@@ -60,6 +126,43 @@ function createHeadingIcon(parent: HTMLElement): void {
 		["path", { d: "M6 20V4" }],
 		["path", { d: "M18 20V4" }],
 	]);
+}
+
+/** Lucide "pin". */
+function pinIconChildren(): SvgChild[] {
+	return [
+		["line", { x1: "12", y1: "17", x2: "12", y2: "22" }],
+		["path", { d: "M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z" }],
+	];
+}
+
+/** Lucide "pin-off". */
+function pinOffIconChildren(): SvgChild[] {
+	return [
+		["line", { x1: "12", y1: "17", x2: "12", y2: "22" }],
+		["path", { d: "M9 9v1.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17h12" }],
+		["path", { d: "M15 9.34V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0-1.33.51" }],
+		["line", { x1: "2", y1: "2", x2: "22", y2: "22" }],
+	];
+}
+
+/** Heading tree helpers: determine parent-child relationships from levels. */
+function isParentHeading(headings: HeadingItem[], index: number): boolean {
+	// A heading is a parent iff the very next heading in the list is deeper.
+	// If the next heading is at the same or shallower level, this heading has
+	// no direct children (any deeper headings further down belong to a
+	// sibling, not to this heading).
+	return index + 1 < headings.length && headings[index + 1].level > headings[index].level;
+}
+
+function getDescendants(headings: HeadingItem[], index: number): number[] {
+	const result: number[] = [];
+	const level = headings[index].level;
+	for (let j = index + 1; j < headings.length; j++) {
+		if (headings[j].level <= level) break;
+		result.push(j);
+	}
+	return result;
 }
 
 /**
@@ -83,6 +186,7 @@ export class TocOverlay {
 	private tasksCountEl!: HTMLElement;
 	private listEl!: HTMLElement;
 	private tasksListEl!: HTMLElement;
+	private pinBtnIconEl!: SVGSVGElement;
 
 	private headings: HeadingItem[] = [];
 	private tasks: TaskItem[] = [];
@@ -96,6 +200,15 @@ export class TocOverlay {
 	/** Starts on the configured default tab, then follows the last-used one. */
 	private activeTab: TocTab;
 	private isOpen = false;
+	private isPinned = false;
+
+	/** Tree-collapse state: which headings are parents, their descendants, and
+	 *  which parent headings are currently expanded. Headings IN this set show
+	 *  their children; headings NOT in this set hide their children. All parent
+	 *  headings start in this set (expanded by default). */
+	private parentIndices: boolean[] = [];
+	private descendantIndices: number[][] = [];
+	private expandedSet = new Set<number>();
 
 	private scroller: HTMLElement | null = null;
 	private closeTimer: number | null = null;
@@ -140,6 +253,7 @@ export class TocOverlay {
 		this.bindGroupEvents();
 		this.applySide();
 		this.applyMinimapSizing();
+		this.applyPanelHeight();
 	}
 
 	/**
@@ -196,22 +310,58 @@ export class TocOverlay {
 
 	private buildPopoverChrome(): void {
 		const body = this.popoverEl.createDiv({ cls: "subtle-toc-body" });
+		const t = getLocale(this.settings.language);
 
+		// -- toolbar: expand/collapse-all + pin --------------------------------
+		const toolbar = body.createDiv({ cls: "subtle-toc-toolbar" });
+
+		const expandBtn = toolbar.createDiv({ cls: "subtle-toc-toolbar-btn subtle-toc-expand-all-btn" });
+		// Two separate SVGs — each has two well-spaced chevrons
+		// 尖头相对 (∨ top + ∧ bottom, tips facing inward) = collapse all
+		createIcon(expandBtn, [
+			["path", { d: "M7 5 L12 10 L17 5", "stroke-width": "1.5", "stroke-linecap": "round", "stroke-linejoin": "round" }],
+			["path", { d: "M7 19 L12 14 L17 19", "stroke-width": "1.5", "stroke-linecap": "round", "stroke-linejoin": "round" }],
+		]);
+		expandBtn.lastElementChild!.classList.add("collapse-icon");
+		// 底部相对 (∧ top + ∨ bottom, bases facing inward) = expand all
+		createIcon(expandBtn, [
+			["path", { d: "M7 10 L12 5 L17 10", "stroke-width": "1.5", "stroke-linecap": "round", "stroke-linejoin": "round" }],
+			["path", { d: "M7 14 L12 19 L17 14", "stroke-width": "1.5", "stroke-linecap": "round", "stroke-linejoin": "round" }],
+		]);
+		expandBtn.lastElementChild!.classList.add("expand-icon");
+		expandBtn.setAttribute("aria-label", t.collapseTooltip);
+		expandBtn.addEventListener("mousedown", (e) => e.preventDefault());
+		expandBtn.addEventListener("click", (e) => {
+			e.stopPropagation();
+			this.toggleCollapse();
+		});
+
+		const pinBtn = toolbar.createDiv({ cls: "subtle-toc-toolbar-btn" });
+		createIcon(pinBtn, pinIconChildren());
+		this.pinBtnIconEl = pinBtn.querySelector("svg")!;
+		pinBtn.setAttribute("aria-label", t.pinTooltip);
+		pinBtn.addEventListener("mousedown", (e) => e.preventDefault());
+		pinBtn.addEventListener("click", (e) => {
+			e.stopPropagation();
+			this.togglePin();
+		});
+
+		// -- tabs ------------------------------------------------------------
 		this.tabsEl = body.createDiv({ cls: "subtle-toc-tabs" });
 		// The default tab leads the tab bar (createTab appends in call order).
 		if (this.settings.defaultTab === "tasks") {
-			this.tasksTabEl = this.createTab("tasks", "Tasks");
-			this.headingsTabEl = this.createTab("headings", "Headings");
+			this.tasksTabEl = this.createTab("tasks", t.tasksTab, t);
+			this.headingsTabEl = this.createTab("headings", t.headingsTab, t);
 		} else {
-			this.headingsTabEl = this.createTab("headings", "Headings");
-			this.tasksTabEl = this.createTab("tasks", "Tasks");
+			this.headingsTabEl = this.createTab("headings", t.headingsTab, t);
+			this.tasksTabEl = this.createTab("tasks", t.tasksTab, t);
 		}
 
 		this.listEl = body.createDiv({ cls: "subtle-toc-list subtle-toc-headings" });
 		this.tasksListEl = body.createDiv({ cls: "subtle-toc-list subtle-toc-tasks" });
 	}
 
-	private createTab(tab: TocTab, label: string): HTMLElement {
+	private createTab(tab: TocTab, label: string, t: Locale): HTMLElement {
 		const btn = this.tabsEl.createDiv({ cls: "subtle-toc-tab" });
 		const icon = btn.createSpan({ cls: "subtle-toc-tab-icon" });
 		if (tab === "tasks") createCheckboxIcon(icon);
@@ -276,6 +426,7 @@ export class TocOverlay {
 	 *  once. Any other exit keeps the grace period, so the popover still survives
 	 *  the cursor falling outside when a shorter tab shrinks it. */
 	private onPopoverLeave(e: MouseEvent): void {
+		if (this.isPinned) return;
 		const rect = this.popoverEl.getBoundingClientRect();
 		const towardNote =
 			this.settings.side === "left" ? e.clientX > rect.right : e.clientX < rect.left;
@@ -301,12 +452,131 @@ export class TocOverlay {
 		this.rootEl.style.setProperty("--toc-popover-width", `${width}px`);
 	}
 
+	private applyPanelHeight(): void {
+		const h = this.settings.panelHeight;
+		if (h > 0) {
+			this.popoverEl.style.setProperty("--toc-panel-height", `${h}px`);
+		} else {
+			this.popoverEl.style.removeProperty("--toc-panel-height");
+		}
+	}
+
+	private applyPanelOpacity(): void {
+		const opacity = Math.min(100, Math.max(10, this.settings.panelOpacity));
+		this.popoverEl.style.setProperty("--toc-panel-opacity", String(opacity / 100));
+	}
+
+	private applyToolbarVisibility(): void {
+		const toolbar = this.popoverEl.querySelector<HTMLElement>(".subtle-toc-toolbar");
+		toolbar?.toggleClass("is-hidden", !this.settings.showToolbar);
+	}
+
+	private applyTabsVisibility(): void {
+		const tabs = this.popoverEl.querySelector<HTMLElement>(".subtle-toc-tabs");
+		tabs?.toggleClass("is-hidden", !this.settings.showTabs);
+	}
+
+	private applyPinned(): void {
+		this.rootEl.toggleClass("is-pinned", this.isPinned);
+		const t = getLocale(this.settings.language);
+		if (this.pinBtnIconEl) {
+			setIconChildren(
+				this.pinBtnIconEl,
+				this.isPinned ? pinOffIconChildren() : pinIconChildren(),
+			);
+			const btn = this.pinBtnIconEl.parentElement;
+			if (btn) btn.setAttribute("aria-label", this.isPinned ? t.unpinTooltip : t.pinTooltip);
+		}
+	}
+
+	private applyCollapsed(): void {
+		this.updateItemVisibility();
+		this.updateToolbarChevron();
+	}
+
+	/** Recompute which heading items are visible based on the per-heading
+	 *  expanded state. A heading is hidden if any DIRECT ancestor (walking
+	 *  up the tree level by level) is NOT in the expanded set. */
+	private updateItemVisibility(): void {
+		for (let i = 0; i < this.headings.length; i++) {
+			let hidden = false;
+			let checkLevel = this.headings[i].level;
+			for (let j = i - 1; j >= 0; j--) {
+				if (this.headings[j].level < checkLevel) {
+					// Found the direct parent at this level
+					if (!this.expandedSet.has(j)) {
+						hidden = true;
+						break;
+					}
+					checkLevel = this.headings[j].level;
+					if (checkLevel <= 1) break;
+				}
+			}
+			this.itemEls[i]?.toggleClass("is-hidden", hidden);
+		}
+	}
+
+	/** Update the toolbar expand-all button icon to reflect global state. */
+	private updateToolbarChevron(): void {
+		const baseLevel = this.headings.reduce((min, h) => Math.min(min, h.level), 6);
+		const allTopCollapsed = this.parentIndices.length > 0 &&
+			this.parentIndices.every(
+				(isP, i) => !isP || this.headings[i].level > baseLevel || !this.expandedSet.has(i),
+			);
+		const btn = this.popoverEl.querySelector<HTMLElement>(".subtle-toc-expand-all-btn");
+		btn?.toggleClass("is-all-collapsed", allTopCollapsed);
+		const t = getLocale(this.settings.language);
+		if (btn) btn.setAttribute("aria-label", allTopCollapsed ? t.expandTooltip : t.collapseTooltip);
+	}
+
 	/** Publish the custom active-tab color; removed when unset so the CSS falls
 	 *  back to the theme's own value. */
 	private applyColors(): void {
 		const color = this.settings.activeTabBgColor;
 		if (color) this.rootEl.style.setProperty("--toc-active-tab-bg", color);
 		else this.rootEl.style.removeProperty("--toc-active-tab-bg");
+	}
+
+	// ---- pin / expand-collapse --------------------------------------------
+
+	private togglePin(): void {
+		if (this.isPinned) {
+			// Unpin → close the popover
+			this.isPinned = false;
+			this.applyPinned();
+			this.close();
+		} else {
+			// Pin → open if not already, then lock it
+			this.isPinned = true;
+			this.applyPinned();
+			this.open();
+		}
+	}
+
+	private toggleCollapse(): void {
+		const baseLevel = this.headings.reduce((min, h) => Math.min(min, h.level), 6);
+		const allTopExpanded = this.parentIndices.every(
+			(isP, i) => !isP || this.headings[i].level > baseLevel || this.expandedSet.has(i),
+		);
+		console.log(`[SubtleTOC] toolbar toggleCollapse: baseLevel=${baseLevel}, allTopExpanded=${allTopExpanded}, expandedSet before:`, [...this.expandedSet]);
+		if (allTopExpanded) {
+			// Collapse all: clear the entire expanded set
+			this.expandedSet.clear();
+			console.log("[SubtleTOC]   → COLLAPSE ALL (cleared expandedSet)");
+		} else {
+			// Expand all: add ALL parents to the expanded set
+			this.parentIndices.forEach((isP, i) => { if (isP) this.expandedSet.add(i); });
+			console.log("[SubtleTOC]   → EXPAND ALL (added all parents)");
+		}
+		console.log("[SubtleTOC] expandedSet after toolbar:", [...this.expandedSet]);
+		// Update all per-item toggle visuals to match the new expanded state
+		this.parentIndices.forEach((isP, i) => {
+			if (isP) {
+				const toggle = this.itemEls[i]?.querySelector<HTMLElement>(".subtle-toc-toggle");
+				toggle?.toggleClass("is-expanded", this.expandedSet.has(i));
+			}
+		});
+		this.applyCollapsed();
 	}
 
 	// ---- data refresh ------------------------------------------------------
@@ -320,6 +590,10 @@ export class TocOverlay {
 		this.applyColors();
 		this.applyTextWrap();
 		this.applyPopoverWidth();
+		this.applyPanelHeight();
+		this.applyPanelOpacity();
+		this.applyToolbarVisibility();
+		this.applyTabsVisibility();
 		this.applyMinimapSizing();
 		this.rebindScroller();
 
@@ -332,7 +606,23 @@ export class TocOverlay {
 				? []
 				: (cache?.headings ?? [])
 						.filter((h) => h.level >= minLevel && h.level <= maxLevel)
-						.map((h) => ({ level: h.level, text: h.heading, line: h.position.start.line }));
+						.map((h) => ({
+							level: h.level,
+							text: stripEscapeBackslashes(h.heading),
+							line: h.position.start.line,
+						}));
+
+		// Compute parent-child tree for per-item collapse toggles.
+		this.parentIndices = this.headings.map((_, i) => isParentHeading(this.headings, i));
+		this.descendantIndices = this.headings.map((_, i) => getDescendants(this.headings, i));
+		// Ensure all current parents are in the expanded set (expanded by default).
+		// Remove stale entries for headings that are no longer parents.
+		for (const idx of this.expandedSet) {
+			if (!this.parentIndices[idx]) this.expandedSet.delete(idx);
+		}
+		this.parentIndices.forEach((isP, i) => { if (isP) this.expandedSet.add(i); });
+		console.log("[SubtleTOC] refresh:", this.headings.map((h, i) => `[${i}] L${h.level} "${h.text}" parent=${this.parentIndices[i]}`));
+		console.log("[SubtleTOC] expandedSet after refresh:", [...this.expandedSet]);
 
 		// While the popover is open, keep the current task snapshot so completing a
 		// task strikes its row instead of yanking it out; it's rebuilt on the next
@@ -355,6 +645,8 @@ export class TocOverlay {
 
 		this.buildMinimap();
 		this.buildList();
+		this.updateItemVisibility();
+		this.updateToolbarChevron();
 		this.activeIndex = -1;
 		this.updateActive();
 
@@ -420,14 +712,16 @@ export class TocOverlay {
 
 	/** The checkbox + open-task count shown on the edge (below the dashes). */
 	private buildTaskBadge(): void {
+		const t = getLocale(this.settings.language);
 		const n = this.tasks.length;
 		this.taskBadgeEl.empty();
 		createCheckboxIcon(this.taskBadgeEl);
 		this.taskBadgeEl.createSpan({ cls: "subtle-toc-task-badge-count", text: String(n) });
-		this.taskBadgeEl.setAttribute("aria-label", `${n} open task${n === 1 ? "" : "s"}`);
+		this.taskBadgeEl.setAttribute("aria-label", t.openTasks(n));
 	}
 
 	private buildList(): void {
+		const t = getLocale(this.settings.language);
 		this.listEl.empty();
 		// Indent relative to the shallowest heading present, so the top level
 		// (H1, or H2 in notes that skip H1) sits flush with no wasted indent.
@@ -437,7 +731,21 @@ export class TocOverlay {
 				cls: `subtle-toc-item subtle-toc-level-${h.level}`,
 			});
 			item.style.setProperty("--toc-indent", String(h.level - baseLevel));
-			const text = h.text || "(untitled)";
+
+			// Per-item expand/collapse toggle for parent headings
+			if (this.parentIndices[i]) {
+				const toggle = item.createDiv({ cls: "subtle-toc-toggle" });
+				toggle.createSpan({ cls: "subtle-toc-toggle-arrow" });
+				toggle.toggleClass("is-expanded", this.expandedSet.has(i));
+				const onClick = (e: MouseEvent) => {
+					e.stopPropagation();
+					this.toggleCollapseAt(i);
+				};
+				toggle.addEventListener("mousedown", (e) => e.preventDefault());
+				toggle.addEventListener("click", onClick);
+			}
+
+			const text = h.text || t.untitled;
 			item.createSpan({ cls: "subtle-toc-item-text", text });
 			// Single-line rows cut long text, so the full version lives in a
 			// tooltip; wrapped rows already show all of it.
@@ -451,15 +759,53 @@ export class TocOverlay {
 		if (this.headings.length === 0) {
 			this.listEl.createDiv({
 				cls: "subtle-toc-empty-msg",
-				text: "No headings in this note.",
+				text: t.noHeadings,
 			});
 		}
 	}
 
+	/** Toggle the collapsed state of a single parent heading. */
+	private toggleCollapseAt(index: number): void {
+		console.log(`[SubtleTOC] toggleCollapseAt(${index}) "${this.headings[index]?.text}" L${this.headings[index]?.level}, expandedSet before:`, [...this.expandedSet]);
+		if (this.expandedSet.has(index)) {
+			// Currently expanded → collapse: remove from set
+			this.expandedSet.delete(index);
+			console.log(`[SubtleTOC]   → was expanded, now COLLAPSED (removed ${index})`);
+		} else {
+			// Currently collapsed → expand: add to set, and ensure DIRECT
+			// ancestors are also expanded so this heading becomes visible.
+			this.expandedSet.add(index);
+			console.log(`[SubtleTOC]   → was collapsed, now EXPANDED (added ${index})`);
+			let checkLevel = this.headings[index].level;
+			for (let j = index - 1; j >= 0; j--) {
+				if (this.headings[j].level < checkLevel) {
+					// Found a direct ancestor
+					if (!this.expandedSet.has(j)) {
+						this.expandedSet.add(j);
+						const t = this.itemEls[j]?.querySelector<HTMLElement>(".subtle-toc-toggle");
+						t?.toggleClass("is-expanded", true);
+						console.log(`[SubtleTOC]   → also expanded ancestor [${j}] "${this.headings[j].text}"`);
+					}
+					checkLevel = this.headings[j].level;
+					if (checkLevel <= 1) break;
+				}
+			}
+		}
+		// Update this item's toggle visual
+		const item = this.itemEls[index];
+		const toggle = item?.querySelector<HTMLElement>(".subtle-toc-toggle");
+		toggle?.toggleClass("is-expanded", this.expandedSet.has(index));
+		// Recompute visibility for all items
+		this.updateItemVisibility();
+		console.log(`[SubtleTOC] expandedSet after:`, [...this.expandedSet]);
+		console.log(`[SubtleTOC] visibility:`, this.headings.map((h, i) => `[${i}] "${h.text}" hidden=${this.itemEls[i]?.hasClass("is-hidden")}`));
+	}
+
 	private buildTaskList(): void {
+		const t = getLocale(this.settings.language);
 		this.tasksListEl.empty();
 		const withCheckboxes = this.settings.showTaskCheckboxes;
-		this.taskEls = this.tasks.map((t, i) => {
+		this.taskEls = this.tasks.map((task, i) => {
 			const item = this.tasksListEl.createDiv({
 				cls: "subtle-toc-item subtle-toc-task-item",
 			});
@@ -475,7 +821,7 @@ export class TocOverlay {
 					this.completeTaskAt(i, item);
 				});
 			}
-			const text = t.text || "(empty task)";
+			const text = task.text || t.emptyTask;
 			item.createSpan({ cls: "subtle-toc-item-text", text });
 			if (!this.settings.multiLine) item.setAttribute("aria-label", text);
 			// Keep focus on the editor so a single click navigates (no focus-steal
@@ -488,7 +834,7 @@ export class TocOverlay {
 		if (this.tasks.length === 0) {
 			this.tasksListEl.createDiv({
 				cls: "subtle-toc-empty-msg",
-				text: "No open tasks in this note.",
+				text: t.noTasks,
 			});
 		}
 	}
@@ -679,6 +1025,7 @@ export class TocOverlay {
 	}
 
 	close(): void {
+		if (this.isPinned) return;
 		if (!this.isOpen) return;
 		this.restoreHoverPreview(false);
 		this.isOpen = false;
@@ -705,6 +1052,7 @@ export class TocOverlay {
 	}
 
 	private scheduleClose(): void {
+		if (this.isPinned) return;
 		this.cancelClose();
 		this.closeTimer = window.setTimeout(() => this.close(), this.settings.closeDelay);
 	}

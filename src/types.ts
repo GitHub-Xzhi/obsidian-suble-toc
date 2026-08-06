@@ -21,8 +21,11 @@ export type TocSide = "right" | "left";
 export type TocTrigger = "hover" | "click";
 export type TocShow = "headings" | "tasks" | "both";
 export type TocDefaultTab = "headings" | "tasks";
+export type TocLanguage = "en" | "zh";
 
 export interface SubtleTocSettings {
+	/** UI language: English or Chinese. */
+	language: TocLanguage;
 	/** Which content to surface: headings, open tasks, or both. */
 	show: TocShow;
 	/** Tab that leads the tab bar and is selected on the first open. */
@@ -43,6 +46,14 @@ export interface SubtleTocSettings {
 	closeDelay: number;
 	/** Width of the TOC popover in CSS pixels. */
 	popoverWidth: number;
+	/** Max height of the TOC popover in CSS pixels (0 = auto/default). */
+	panelHeight: number;
+	/** Opacity of the TOC popover (0-100, 100 = fully opaque). */
+	panelOpacity: number;
+	/** Show the expand/collapse-all toolbar button in the popover. */
+	showToolbar: boolean;
+	/** Show the tab bar (Headings/Tasks) in the popover. */
+	showTabs: boolean;
 	/** Lowest heading level to include (1 = H1). */
 	minLevel: number;
 	/** Highest heading level to include (6 = H6). */
@@ -60,6 +71,7 @@ export interface SubtleTocSettings {
 }
 
 export const DEFAULT_SETTINGS: SubtleTocSettings = {
+	language: "en",
 	show: "both",
 	defaultTab: "headings",
 	showMinimap: true,
@@ -70,6 +82,10 @@ export const DEFAULT_SETTINGS: SubtleTocSettings = {
 	openTrigger: "hover",
 	closeDelay: 160,
 	popoverWidth: 264,
+	panelHeight: 0,
+	panelOpacity: 100,
+	showToolbar: true,
+	showTabs: true,
 	minLevel: 1,
 	maxLevel: 6,
 	smoothScroll: true,
