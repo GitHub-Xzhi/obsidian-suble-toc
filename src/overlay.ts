@@ -461,9 +461,11 @@ export class TocOverlay {
 		}
 	}
 
-	private applyPanelOpacity(): void {
-		const opacity = Math.min(100, Math.max(10, this.settings.panelOpacity));
-		this.popoverEl.style.setProperty("--toc-panel-opacity", String(opacity / 100));
+	private applyOpacity(): void {
+		const bgOpacity = Math.min(100, Math.max(10, this.settings.panelBgOpacity));
+		this.popoverEl.style.setProperty("--toc-panel-opacity", String(bgOpacity / 100));
+		const textOpacity = Math.min(100, Math.max(10, this.settings.headingOpacity));
+		this.popoverEl.style.setProperty("--toc-heading-opacity", String(textOpacity / 100));
 	}
 
 	private applyToolbarVisibility(): void {
@@ -591,7 +593,7 @@ export class TocOverlay {
 		this.applyTextWrap();
 		this.applyPopoverWidth();
 		this.applyPanelHeight();
-		this.applyPanelOpacity();
+		this.applyOpacity();
 		this.applyToolbarVisibility();
 		this.applyTabsVisibility();
 		this.applyMinimapSizing();

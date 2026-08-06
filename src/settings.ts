@@ -29,7 +29,8 @@ interface SettingsLocale {
 	closeDelay: [string, string];
 	popoverWidth: [string, string];
 	panelHeight: [string, string];
-	panelOpacity: [string, string];
+	panelBgOpacity: [string, string];
+	headingOpacity: [string, string];
 	showToolbar: [string, string];
 	showTabs: [string, string];
 	smoothScroll: [string, string];
@@ -61,7 +62,8 @@ const EN: SettingsLocale = {
 	closeDelay: ["Close delay", "How long the popover waits before closing after the mouse leaves it, in milliseconds. Raise it if it closes on you while switching tabs."],
 	popoverWidth: ["Popover width", "Set the width of the TOC popover in pixels (264 is the default)."],
 	panelHeight: ["Panel height", "Custom max height of the TOC popover in pixels. Set to 0 to use the default (50vh)."],
-	panelOpacity: ["Panel opacity", "Transparency of the TOC popover panel (10-100%). Lower values make the panel more transparent."],
+	panelBgOpacity: ["Panel background opacity", "Transparency of the TOC panel background (10-100%). Lower values make the background more transparent."],
+	headingOpacity: ["Heading text opacity", "Transparency of the heading and task text in the TOC panel (10-100%). Lower values make the text more transparent."],
 	showToolbar: ["Show toolbar", "Show the expand/collapse-all button at the top of the TOC panel."],
 	showTabs: ["Show tab bar", "Show the Headings/Tasks tab bar in the TOC panel."],
 	smoothScroll: ["Smooth scroll", "Animate the scroll when navigating to a heading."],
@@ -93,7 +95,8 @@ const ZH: SettingsLocale = {
 	closeDelay: ["关闭延迟", "鼠标离开弹出面板后等待关闭的时间（毫秒）。如果在切换标签时面板关闭太快，请增大此值。"],
 	popoverWidth: ["面板宽度", "设置 TOC 弹出面板的宽度（像素），默认 264。"],
 	panelHeight: ["面板高度", "自定义 TOC 弹出面板的最大高度（像素）。设为 0 使用默认值（50vh）。"],
-	panelOpacity: ["面板透明度", "TOC 弹出面板的透明度（10-100%）。数值越低越透明。"],
+	panelBgOpacity: ["面板背景透明度", "TOC 面板背景的透明度（10-100%）。数值越低越透明。"],
+	headingOpacity: ["标题文字透明度", "TOC 面板中标题和任务文字的透明度（10-100%）。数值越低越透明。"],
 	showToolbar: ["显示工具栏", "在 TOC 面板顶部显示展开/收起全部按钮。"],
 	showTabs: ["显示标签栏", "在 TOC 面板中显示标题/任务标签栏。"],
 	smoothScroll: ["平滑滚动", "导航到标题时使用动画滚动。"],
@@ -326,15 +329,29 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName(t.panelOpacity[0])
-			.setDesc(t.panelOpacity[1])
+			.setName(t.panelBgOpacity[0])
+			.setDesc(t.panelBgOpacity[1])
 			.addSlider((s) =>
 				s
 					.setLimits(10, 100, 5)
-					.setValue(this.plugin.settings.panelOpacity)
+					.setValue(this.plugin.settings.panelBgOpacity)
 					.setDynamicTooltip()
 					.onChange(async (v) => {
-						this.plugin.settings.panelOpacity = v;
+						this.plugin.settings.panelBgOpacity = v;
+						await this.plugin.saveAndRefresh();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName(t.headingOpacity[0])
+			.setDesc(t.headingOpacity[1])
+			.addSlider((s) =>
+				s
+					.setLimits(10, 100, 5)
+					.setValue(this.plugin.settings.headingOpacity)
+					.setDynamicTooltip()
+					.onChange(async (v) => {
+						this.plugin.settings.headingOpacity = v;
 						await this.plugin.saveAndRefresh();
 					}),
 			);

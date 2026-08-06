@@ -48,8 +48,10 @@ export interface SubtleTocSettings {
 	popoverWidth: number;
 	/** Max height of the TOC popover in CSS pixels (0 = auto/default). */
 	panelHeight: number;
-	/** Opacity of the TOC popover (0-100, 100 = fully opaque). */
-	panelOpacity: number;
+	/** Background opacity of the TOC popover (10-100, 100 = fully opaque). */
+	panelBgOpacity: number;
+	/** Opacity of the heading/task text in the TOC popover (10-100). */
+	headingOpacity: number;
 	/** Show the expand/collapse-all toolbar button in the popover. */
 	showToolbar: boolean;
 	/** Show the tab bar (Headings/Tasks) in the popover. */
@@ -83,7 +85,8 @@ export const DEFAULT_SETTINGS: SubtleTocSettings = {
 	closeDelay: 160,
 	popoverWidth: 264,
 	panelHeight: 0,
-	panelOpacity: 100,
+	panelBgOpacity: 100,
+	headingOpacity: 100,
 	showToolbar: true,
 	showTabs: true,
 	minLevel: 1,

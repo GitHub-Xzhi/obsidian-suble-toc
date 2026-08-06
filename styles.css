@@ -378,6 +378,7 @@
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
+	opacity: var(--toc-heading-opacity, 1);
 }
 
 /* "Show multiple lines": wrap the full text instead of cutting it — no tooltip
