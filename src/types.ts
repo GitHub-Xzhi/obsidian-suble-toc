@@ -101,5 +101,5 @@ export const DEFAULT_SETTINGS: SubtleTocSettings = {
 	activeTabBgColor: "",
 	multiLine: true,
 	showLevelBadges: true,
-	headingColors: ["#e06c75", "#e5c07b", "#98c379", "#56b6c2", "#61afef", "#c678dd"],
+	headingColors: ["#b4637a", "#d7827e", "#ea9d34", "#286983", "#907aa9", "#575279"],
 };
