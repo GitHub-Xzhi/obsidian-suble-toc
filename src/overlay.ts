@@ -46,6 +46,10 @@ interface Locale {
 	openTasks: (n: number) => string;
 	pinTooltip: string;
 	unpinTooltip: string;
+	searchTooltip: string;
+	closeSearchTooltip: string;
+	searchPlaceholder: string;
+	noSearchResults: string;
 	expandTooltip: string;
 	collapseTooltip: string;
 }
@@ -60,6 +64,10 @@ const LOCALE_EN: Locale = {
 	openTasks: (n) => `${n} open task${n === 1 ? "" : "s"}`,
 	pinTooltip: "Pin panel",
 	unpinTooltip: "Unpin panel",
+	searchTooltip: "Search headings",
+	closeSearchTooltip: "Close heading search",
+	searchPlaceholder: "Search headings...",
+	noSearchResults: "No matching headings.",
 	expandTooltip: "Expand all",
 	collapseTooltip: "Collapse all",
 };
@@ -74,6 +82,10 @@ const LOCALE_ZH: Locale = {
 	openTasks: (n) => `${n} 个待办任务`,
 	pinTooltip: "固定面板",
 	unpinTooltip: "取消固定",
+	searchTooltip: "搜索标题",
+	closeSearchTooltip: "关闭标题搜索",
+	searchPlaceholder: "搜索标题...",
+	noSearchResults: "没有匹配的标题。",
 	expandTooltip: "展开全部",
 	collapseTooltip: "收起全部",
 };
@@ -139,6 +151,14 @@ function createHeadingIcon(parent: HTMLElement): void {
 	]);
 }
 
+/** Lucide "search". */
+function createSearchIcon(parent: HTMLElement): void {
+	createIcon(parent, [
+		["circle", { cx: "11", cy: "11", r: "8" }],
+		["path", { d: "m21 21-4.3-4.3" }],
+	]);
+}
+
 /** Lucide "pin". */
 function pinIconChildren(): SvgChild[] {
 	return [
@@ -176,6 +196,40 @@ function getDescendants(headings: HeadingItem[], index: number): number[] {
 	return result;
 }
 
+const COMBINING_MARKS_RE = /[\u0300-\u036f]/g;
+
+function normalizeSearchText(text: string): string {
+	return text
+		.normalize("NFKD")
+		.replace(COMBINING_MARKS_RE, "")
+		.toLocaleLowerCase()
+		.replace(/\s+/g, "");
+}
+
+function getSearchTokens(query: string): string[] {
+	return query
+		.trim()
+		.split(/\s+/)
+		.map(normalizeSearchText)
+		.filter(Boolean);
+}
+
+function isFuzzyMatch(haystack: string, needle: string): boolean {
+	let from = 0;
+	for (const char of needle) {
+		const next = haystack.indexOf(char, from);
+		if (next === -1) return false;
+		from = next + char.length;
+	}
+	return true;
+}
+
+function headingMatchesSearch(heading: HeadingItem, tokens: string[]): boolean {
+	if (tokens.length === 0) return true;
+	const haystack = normalizeSearchText(heading.text);
+	return tokens.every((token) => isFuzzyMatch(haystack, token));
+}
+
 /**
  * Owns all DOM and listeners for the floating TOC of a single MarkdownView.
  * The plugin creates one of these per active view and tears it down when the
@@ -198,6 +252,9 @@ export class TocOverlay {
 	private listEl!: HTMLElement;
 	private tasksListEl!: HTMLElement;
 	private pinBtnIconEl!: SVGSVGElement;
+	private searchBtnEl!: HTMLElement;
+	private searchInputEl!: HTMLInputElement;
+	private searchEmptyEl: HTMLElement | null = null;
 
 	private headings: HeadingItem[] = [];
 	private tasks: TaskItem[] = [];
@@ -212,6 +269,8 @@ export class TocOverlay {
 	private activeTab: TocTab;
 	private isOpen = false;
 	private isPinned = false;
+	private isSearchActive = false;
+	private searchQuery = "";
 
 	/** Tree-collapse state: which headings are parents, their descendants, and
 	 *  which parent headings are currently expanded. Headings IN this set show
@@ -323,7 +382,7 @@ export class TocOverlay {
 		const body = this.popoverEl.createDiv({ cls: "subtle-toc-body" });
 		const t = getLocale(this.settings.language);
 
-		// -- toolbar: expand/collapse-all + pin --------------------------------
+		// -- toolbar: expand/collapse-all + search + pin -------------------------
 		const toolbar = body.createDiv({ cls: "subtle-toc-toolbar" });
 
 		const expandBtn = toolbar.createDiv({ cls: "subtle-toc-toolbar-btn subtle-toc-expand-all-btn" });
@@ -347,7 +406,16 @@ export class TocOverlay {
 			this.toggleCollapse();
 		});
 
-		const pinBtn = toolbar.createDiv({ cls: "subtle-toc-toolbar-btn" });
+		this.searchBtnEl = toolbar.createDiv({ cls: "subtle-toc-toolbar-btn subtle-toc-search-btn" });
+		createSearchIcon(this.searchBtnEl);
+		this.searchBtnEl.setAttribute("aria-label", t.searchTooltip);
+		this.searchBtnEl.addEventListener("mousedown", (e) => e.preventDefault());
+		this.searchBtnEl.addEventListener("click", (e) => {
+			e.stopPropagation();
+			this.toggleSearch();
+		});
+
+		const pinBtn = toolbar.createDiv({ cls: "subtle-toc-toolbar-btn subtle-toc-pin-btn" });
 		createIcon(pinBtn, pinIconChildren());
 		this.pinBtnIconEl = pinBtn.querySelector("svg")!;
 		pinBtn.setAttribute("aria-label", t.pinTooltip);
@@ -356,6 +424,24 @@ export class TocOverlay {
 			e.stopPropagation();
 			this.togglePin();
 		});
+
+		const searchRow = body.createDiv({ cls: "subtle-toc-search-row" });
+		this.searchInputEl = searchRow.createEl("input", {
+			cls: "subtle-toc-search-input",
+			attr: {
+				type: "search",
+				placeholder: t.searchPlaceholder,
+				autocomplete: "off",
+				spellcheck: "false",
+			},
+		});
+		this.searchInputEl.addEventListener("mousedown", (e) => e.stopPropagation());
+		this.searchInputEl.addEventListener("click", (e) => e.stopPropagation());
+		this.searchInputEl.addEventListener("input", () => {
+			this.searchQuery = this.searchInputEl.value;
+			this.updateItemVisibility();
+		});
+		this.searchInputEl.addEventListener("keydown", (e) => this.handleSearchKeydown(e));
 
 		// -- tabs ------------------------------------------------------------
 		this.tabsEl = body.createDiv({ cls: "subtle-toc-tabs" });
@@ -393,7 +479,10 @@ export class TocOverlay {
 
 	/** Switch the visible list; the tab bar itself only appears when both exist. */
 	private selectTab(tab: TocTab): void {
-		if (tab !== "headings") this.restoreHoverPreview();
+		if (tab !== "headings") {
+			this.restoreHoverPreview();
+			if (this.isSearchActive) this.setSearchActive(false);
+		}
 		this.activeTab = tab;
 		this.rootEl.toggleClass("is-tab-headings", tab === "headings");
 		this.rootEl.toggleClass("is-tab-tasks", tab === "tasks");
@@ -502,6 +591,72 @@ export class TocOverlay {
 		}
 	}
 
+	private syncSearchChrome(): void {
+		const t = getLocale(this.settings.language);
+		this.rootEl.toggleClass("is-search-active", this.isSearchActive);
+		this.searchBtnEl?.toggleClass("is-active", this.isSearchActive);
+		this.searchBtnEl?.setAttribute(
+			"aria-label",
+			this.isSearchActive ? t.closeSearchTooltip : t.searchTooltip,
+		);
+		if (this.searchInputEl) {
+			this.searchInputEl.placeholder = t.searchPlaceholder;
+			if (this.searchInputEl.value !== this.searchQuery) {
+				this.searchInputEl.value = this.searchQuery;
+			}
+		}
+	}
+
+	private syncSearchAvailability(): void {
+		const hasHeadings = this.headings.length > 0;
+		this.searchBtnEl?.toggleClass("is-hidden", !hasHeadings);
+		if (!hasHeadings) {
+			this.isSearchActive = false;
+			this.searchQuery = "";
+		}
+		this.syncSearchChrome();
+	}
+
+	private toggleSearch(): void {
+		this.setSearchActive(!this.isSearchActive, true);
+	}
+
+	private setSearchActive(active: boolean, focus = false): void {
+		this.isSearchActive = active;
+		if (!active) this.searchQuery = "";
+		this.syncSearchChrome();
+		if (active) {
+			this.selectTab("headings");
+			if (focus) {
+				requestAnimationFrame(() => {
+					this.searchInputEl?.focus();
+					this.searchInputEl?.select();
+				});
+			}
+		}
+		this.updateItemVisibility();
+	}
+
+	private handleSearchKeydown(e: KeyboardEvent): void {
+		e.stopPropagation();
+		if (e.key === "Escape") {
+			e.preventDefault();
+			if (this.searchQuery) {
+				this.searchQuery = "";
+				this.syncSearchChrome();
+				this.updateItemVisibility();
+			} else {
+				this.setSearchActive(false);
+			}
+			return;
+		}
+		if (e.key === "Enter") {
+			e.preventDefault();
+			const index = this.itemEls.findIndex((el) => !el.hasClass("is-hidden"));
+			if (index >= 0) this.navigate(index);
+		}
+	}
+
 	private applyCollapsed(): void {
 		this.updateItemVisibility();
 		this.updateToolbarChevron();
@@ -511,22 +666,32 @@ export class TocOverlay {
 	 *  expanded state. A heading is hidden if any DIRECT ancestor (walking
 	 *  up the tree level by level) is NOT in the expanded set. */
 	private updateItemVisibility(): void {
+		const searchTokens = this.isSearchActive ? getSearchTokens(this.searchQuery) : [];
+		let visibleSearchMatches = 0;
 		for (let i = 0; i < this.headings.length; i++) {
-			let hidden = false;
-			let checkLevel = this.headings[i].level;
-			for (let j = i - 1; j >= 0; j--) {
-				if (this.headings[j].level < checkLevel) {
-					// Found the direct parent at this level
-					if (!this.expandedSet.has(j)) {
-						hidden = true;
-						break;
+			let hiddenByCollapse = false;
+			const matchesSearch = headingMatchesSearch(this.headings[i], searchTokens);
+			if (matchesSearch) visibleSearchMatches++;
+			if (searchTokens.length === 0) {
+				let checkLevel = this.headings[i].level;
+				for (let j = i - 1; j >= 0; j--) {
+					if (this.headings[j].level < checkLevel) {
+						// Found the direct parent at this level
+						if (!this.expandedSet.has(j)) {
+							hiddenByCollapse = true;
+							break;
+						}
+						checkLevel = this.headings[j].level;
+						if (checkLevel <= 1) break;
 					}
-					checkLevel = this.headings[j].level;
-					if (checkLevel <= 1) break;
 				}
 			}
-			this.itemEls[i]?.toggleClass("is-hidden", hidden);
+			this.itemEls[i]?.toggleClass("is-hidden", hiddenByCollapse || !matchesSearch);
 		}
+		this.searchEmptyEl?.toggleClass(
+			"is-hidden",
+			searchTokens.length === 0 || visibleSearchMatches > 0,
+		);
 	}
 
 	/** Update the toolbar expand-all button icon to reflect global state. */
@@ -647,6 +812,7 @@ export class TocOverlay {
 
 		this.rootEl.toggleClass("is-empty", !hasHeadings && !hasTasks);
 		this.headingsTabEl.toggleClass("is-hidden", !hasHeadings);
+		this.syncSearchAvailability();
 		// Dashes honor the "show minimap" toggle; the badge's visibility is set in
 		// refreshTasks().
 		this.minimapEl.toggleClass("is-hidden", !showMinimap || !hasHeadings);
@@ -736,6 +902,7 @@ export class TocOverlay {
 	private buildList(): void {
 		const t = getLocale(this.settings.language);
 		this.listEl.empty();
+		this.searchEmptyEl = null;
 		// Indent relative to the shallowest heading present, so the top level
 		// (H1, or H2 in notes that skip H1) sits flush with no wasted indent.
 		const baseLevel = this.headings.reduce((min, h) => Math.min(min, h.level), 6);
@@ -785,6 +952,11 @@ export class TocOverlay {
 			this.listEl.createDiv({
 				cls: "subtle-toc-empty-msg",
 				text: t.noHeadings,
+			});
+		} else {
+			this.searchEmptyEl = this.listEl.createDiv({
+				cls: "subtle-toc-empty-msg subtle-toc-search-empty is-hidden",
+				text: t.noSearchResults,
 			});
 		}
 	}
@@ -1053,6 +1225,7 @@ export class TocOverlay {
 		if (this.isPinned) return;
 		if (!this.isOpen) return;
 		this.restoreHoverPreview(false);
+		this.setSearchActive(false);
 		this.isOpen = false;
 		this.rootEl.removeClass("is-open");
 		this.itemEls.forEach((el) => el.removeClass("is-peek"));
