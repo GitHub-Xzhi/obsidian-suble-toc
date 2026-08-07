@@ -468,6 +468,10 @@
 	text-align: center;
 }
 
+.subtle-toc-empty-msg.is-hidden {
+	display: none;
+}
+
 /* ---- toolbar (pin + expand/collapse buttons) ----------------------------- */
 
 .subtle-toc-toolbar {
