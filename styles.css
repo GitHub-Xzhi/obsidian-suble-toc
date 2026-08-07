@@ -402,8 +402,8 @@
 	font-size: var(--font-ui-smaller, 11px);
 	font-weight: var(--font-semibold, 600);
 	line-height: 1.5;
-	color: var(--badge-color, var(--text-muted));
-	background: color-mix(in srgb, var(--badge-color, var(--text-muted)) 15%, transparent);
+	color: color-mix(in srgb, var(--badge-color, var(--text-muted)) 65%, var(--text-muted));
+	background: color-mix(in srgb, var(--badge-color, var(--text-muted)) 8%, transparent);
 	user-select: none;
 }
 
