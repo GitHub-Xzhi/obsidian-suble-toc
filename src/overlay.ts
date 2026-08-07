@@ -48,6 +48,7 @@ interface Locale {
 	unpinTooltip: string;
 	searchTooltip: string;
 	closeSearchTooltip: string;
+	clearSearchTooltip: string;
 	searchPlaceholder: string;
 	noSearchResults: string;
 	expandTooltip: string;
@@ -66,6 +67,7 @@ const LOCALE_EN: Locale = {
 	unpinTooltip: "Unpin panel",
 	searchTooltip: "Search headings",
 	closeSearchTooltip: "Close heading search",
+	clearSearchTooltip: "Clear search",
 	searchPlaceholder: "Search headings...",
 	noSearchResults: "No matching headings.",
 	expandTooltip: "Expand all",
@@ -84,6 +86,7 @@ const LOCALE_ZH: Locale = {
 	unpinTooltip: "取消固定",
 	searchTooltip: "搜索标题",
 	closeSearchTooltip: "关闭标题搜索",
+	clearSearchTooltip: "清除搜索",
 	searchPlaceholder: "搜索标题...",
 	noSearchResults: "没有匹配的标题。",
 	expandTooltip: "展开全部",
@@ -156,6 +159,14 @@ function createSearchIcon(parent: HTMLElement): void {
 	createIcon(parent, [
 		["circle", { cx: "11", cy: "11", r: "8" }],
 		["path", { d: "m21 21-4.3-4.3" }],
+	]);
+}
+
+/** Lucide "x". */
+function createClearIcon(parent: HTMLElement): void {
+	createIcon(parent, [
+		["path", { d: "M18 6 6 18" }],
+		["path", { d: "m6 6 12 12" }],
 	]);
 }
 
@@ -254,6 +265,7 @@ export class TocOverlay {
 	private pinBtnIconEl!: SVGSVGElement;
 	private searchBtnEl!: HTMLElement;
 	private searchInputEl!: HTMLInputElement;
+	private clearSearchBtnEl!: HTMLElement;
 	private searchEmptyEl: HTMLElement | null = null;
 
 	private headings: HeadingItem[] = [];
@@ -442,6 +454,14 @@ export class TocOverlay {
 			this.updateItemVisibility();
 		});
 		this.searchInputEl.addEventListener("keydown", (e) => this.handleSearchKeydown(e));
+		this.clearSearchBtnEl = searchRow.createDiv({ cls: "subtle-toc-search-clear-btn is-hidden" });
+		createClearIcon(this.clearSearchBtnEl);
+		this.clearSearchBtnEl.setAttribute("aria-label", t.clearSearchTooltip);
+		this.clearSearchBtnEl.addEventListener("mousedown", (e) => e.preventDefault());
+		this.clearSearchBtnEl.addEventListener("click", (e) => {
+			e.stopPropagation();
+			this.clearSearch(true);
+		});
 
 		// -- tabs ------------------------------------------------------------
 		this.tabsEl = body.createDiv({ cls: "subtle-toc-tabs" });
@@ -605,6 +625,8 @@ export class TocOverlay {
 				this.searchInputEl.value = this.searchQuery;
 			}
 		}
+		this.clearSearchBtnEl?.setAttribute("aria-label", t.clearSearchTooltip);
+		this.clearSearchBtnEl?.toggleClass("is-hidden", this.searchQuery.length === 0);
 	}
 
 	private syncSearchAvailability(): void {
@@ -637,14 +659,19 @@ export class TocOverlay {
 		this.updateItemVisibility();
 	}
 
+	private clearSearch(focus = false): void {
+		this.searchQuery = "";
+		this.syncSearchChrome();
+		this.updateItemVisibility();
+		if (focus) requestAnimationFrame(() => this.searchInputEl?.focus());
+	}
+
 	private handleSearchKeydown(e: KeyboardEvent): void {
 		e.stopPropagation();
 		if (e.key === "Escape") {
 			e.preventDefault();
 			if (this.searchQuery) {
-				this.searchQuery = "";
-				this.syncSearchChrome();
-				this.updateItemVisibility();
+				this.clearSearch(true);
 			} else {
 				this.setSearchActive(false);
 			}

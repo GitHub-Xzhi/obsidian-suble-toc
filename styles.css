@@ -513,6 +513,7 @@
 }
 
 .subtle-toc-search-row {
+	position: relative;
 	display: none;
 	padding: 6px 8px 0;
 }
@@ -524,7 +525,7 @@
 .subtle-toc-search-input {
 	width: 100%;
 	height: 28px;
-	padding: 4px 8px;
+	padding: 4px 28px 4px 8px;
 	border: 1px solid var(--background-modifier-border);
 	border-radius: 6px;
 	background: var(--background-primary);
@@ -537,6 +538,35 @@
 	border-color: var(--interactive-accent);
 	box-shadow: 0 0 0 1px var(--interactive-accent);
 	outline: none;
+}
+
+.subtle-toc-search-clear-btn {
+	position: absolute;
+	right: 12px;
+	top: 9px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 20px;
+	height: 20px;
+	border-radius: 5px;
+	color: var(--text-faint);
+	cursor: pointer;
+	transition: background-color 100ms ease, color 100ms ease;
+}
+
+.subtle-toc-search-clear-btn:hover {
+	background: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+
+.subtle-toc-search-clear-btn.is-hidden {
+	display: none;
+}
+
+.subtle-toc-search-clear-btn .subtle-toc-icon {
+	width: 13px;
+	height: 13px;
 }
 
 /* ---- pinned state -------------------------------------------------------- */
