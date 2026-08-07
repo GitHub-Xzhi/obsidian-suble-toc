@@ -283,7 +283,7 @@ export class TocOverlay {
 	private isPinned = false;
 	private isSearchActive = false;
 	private searchQuery = "";
-	private keepOpenUntilSearchReenter = false;
+	private keepOpenUntilPopoverReenter = false;
 
 	/** Tree-collapse state: which headings are parents, their descendants, and
 	 *  which parent headings are currently expanded. Headings IN this set show
@@ -540,7 +540,7 @@ export class TocOverlay {
 
 		this.popoverEl.addEventListener("mouseenter", () => {
 			this.cancelClose();
-			this.keepOpenUntilSearchReenter = false;
+			this.keepOpenUntilPopoverReenter = false;
 		});
 		this.popoverEl.addEventListener("mouseleave", (e) => this.onPopoverLeave(e));
 	}
@@ -549,7 +549,7 @@ export class TocOverlay {
 	 *  once. Any other exit keeps the grace period, so the popover still survives
 	 *  the cursor falling outside when a shorter tab shrinks it. */
 	private onPopoverLeave(e: MouseEvent): void {
-		if (this.isPinned || this.keepOpenUntilSearchReenter) return;
+		if (this.isPinned || this.keepOpenUntilPopoverReenter) return;
 		const rect = this.popoverEl.getBoundingClientRect();
 		const towardNote =
 			this.settings.side === "left" ? e.clientX > rect.right : e.clientX < rect.left;
@@ -650,7 +650,7 @@ export class TocOverlay {
 		this.isSearchActive = active;
 		if (!active) {
 			this.searchQuery = "";
-			this.keepOpenUntilSearchReenter = false;
+			this.keepOpenUntilPopoverReenter = false;
 		}
 		this.syncSearchChrome();
 		if (active) {
@@ -667,8 +667,8 @@ export class TocOverlay {
 
 	private setSearchQuery(query: string): void {
 		this.searchQuery = query;
-		this.keepOpenUntilSearchReenter = query.length > 0;
-		if (this.keepOpenUntilSearchReenter) this.cancelClose();
+		this.keepOpenUntilPopoverReenter = query.length > 0;
+		if (this.keepOpenUntilPopoverReenter) this.cancelClose();
 		this.syncSearchChrome();
 		this.updateItemVisibility();
 	}
@@ -778,6 +778,8 @@ export class TocOverlay {
 		console.log(`[SubtleTOC] toolbar toggleCollapse: baseLevel=${baseLevel}, allTopExpanded=${allTopExpanded}, expandedSet before:`, [...this.expandedSet]);
 		if (allTopExpanded) {
 			// Collapse all: clear the entire expanded set
+			this.keepOpenUntilPopoverReenter = true;
+			this.cancelClose();
 			this.expandedSet.clear();
 			console.log("[SubtleTOC]   → COLLAPSE ALL (cleared expandedSet)");
 		} else {
@@ -1289,7 +1291,7 @@ export class TocOverlay {
 	}
 
 	private scheduleClose(): void {
-		if (this.isPinned || this.keepOpenUntilSearchReenter) return;
+		if (this.isPinned || this.keepOpenUntilPopoverReenter) return;
 		this.cancelClose();
 		this.closeTimer = window.setTimeout(() => this.close(), this.settings.closeDelay);
 	}
