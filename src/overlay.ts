@@ -284,6 +284,7 @@ export class TocOverlay {
 	private isSearchActive = false;
 	private searchQuery = "";
 	private keepOpenUntilPopoverReenter = false;
+	private lastHeadingMouseDownNavigateAt = 0;
 
 	/** Tree-collapse state: which headings are parents, their descendants, and
 	 *  which parent headings are currently expanded. Headings IN this set show
@@ -962,7 +963,10 @@ export class TocOverlay {
 					e.stopPropagation();
 					this.toggleCollapseAt(i);
 				};
-				toggle.addEventListener("mousedown", (e) => e.preventDefault());
+				toggle.addEventListener("mousedown", (e) => {
+					e.preventDefault();
+					e.stopPropagation();
+				});
 				toggle.addEventListener("click", onClick);
 			}
 
@@ -985,7 +989,8 @@ export class TocOverlay {
 			if (!this.settings.multiLine) item.setAttribute("aria-label", text);
 			item.addEventListener("mouseenter", () => this.previewHeadingOnHover(i));
 			item.addEventListener("mouseleave", () => this.scheduleHoverPreviewRestore());
-			item.addEventListener("click", () => this.navigate(i));
+			item.addEventListener("mousedown", (e) => this.handleHeadingMouseDown(e, i));
+			item.addEventListener("click", (e) => this.handleHeadingClick(e, i));
 			return item;
 		});
 
@@ -1172,6 +1177,28 @@ export class TocOverlay {
 		scrollToTarget(this.view, heading, this.settings.smoothScroll);
 		// optimistic highlight; the scroll listener will confirm/correct
 		this.setActive(index);
+	}
+
+	private handleHeadingMouseDown(event: MouseEvent, index: number): void {
+		if (event.button !== 0 || this.isHeadingToggleEvent(event)) return;
+		event.preventDefault();
+		event.stopPropagation();
+		this.lastHeadingMouseDownNavigateAt = performance.now();
+		this.plugin.app.workspace.setActiveLeaf(this.view.leaf, { focus: true });
+		requestAnimationFrame(() => this.navigate(index));
+	}
+
+	private handleHeadingClick(event: MouseEvent, index: number): void {
+		if (this.isHeadingToggleEvent(event)) return;
+		event.preventDefault();
+		event.stopPropagation();
+		if (performance.now() - this.lastHeadingMouseDownNavigateAt < 750) return;
+		this.navigate(index);
+	}
+
+	private isHeadingToggleEvent(event: MouseEvent): boolean {
+		const target = event.target;
+		return target instanceof HTMLElement && !!target.closest(".subtle-toc-toggle");
 	}
 
 	/** Temporarily show a hovered heading without moving the editor cursor or
