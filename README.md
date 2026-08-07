@@ -1,123 +1,91 @@
-# Subtle TOC
+# Subtle TOC Plus
 
-A floating, Capacities-style table of contents for [Obsidian](https://obsidian.md).
+> 本项目基于 [xupisco/obsidian-suble-toc](https://github.com/xupisco/obsidian-suble-toc) 进行修改与扩展。
+> 感谢原作者优秀的开源工作！
+>
+> This project is modified and extended from [xupisco/obsidian-suble-toc](https://github.com/xupisco/obsidian-suble-toc).
+> Thanks to the original author for the excellent open-source work!
 
-A discreet dashed **minimap** lives on the edge of your note. Hover (or click) it
-and a **popover outline** slides out — the heading for the section you're reading
-is highlighted, and clicking any heading jumps to it.
+## 项目简介 / Overview
 
-It can also surface the note's **open tasks** in a second tab — with a live count
-and optional one-click completion — while the minimap stays focused on structure.
+Subtle TOC Plus 是一个适用于 Obsidian 的轻量悬浮目录插件。它会在笔记边缘显示细线式标题缩略图，并在弹出面板中展示标题与待办任务（可通过“显示标签栏”开关显示标题/任务标签栏），帮助你快速浏览长文结构、跳转到对应位置，并处理未完成任务。
 
-## Features
+Subtle TOC Plus is a lightweight floating table-of-contents plugin for Obsidian. It shows a subtle heading minimap on the edge of the note and opens a popover with headings and open tasks (the Headings/Tasks tab bar can be shown with the "Show tab bar" toggle), making it easier to scan long notes, jump to sections, and handle unfinished tasks.
 
-- **Floating popover** overlaid on the note (no sidebar pane needed).
-- **Edge minimap** of dashes, one per heading, sized by heading level.
-- **Active-heading tracking** in both Editing (Live Preview / Source) and Reading mode.
-- **Click to navigate** with optional smooth scroll — works in both modes.
-- **Preview headings on hover** *(optional)* — moving across heading rows in the
-  popover temporarily scrolls the note without moving the editor cursor. Leaving
-  returns to the previous position; clicking stays at the heading.
-- **Tasks tab** — the note's open tasks (unchecked checkboxes), in document order,
-  as a second tab in the popover, with a live open-task count on the tab.
-- **Edge task badge** — a checkbox + count on the edge whenever the note has open
-  tasks (below the dashes, or on its own when the note has no headings).
-- **Complete from the TOC** *(optional)* — turn on task checkboxes to tick a task
-  straight from the popover; it's marked done in the note (undoable in Editing
-  mode), strikes through, and drops out the next time you open the popover.
-- **Show** what you want: headings, tasks, or both.
-- **Multi-line rows** so long headings and tasks are readable in full — or turn
-  them off for single-line rows with the full text in a tooltip.
-- **Tweakable feel**: which tab leads the popover, how long it waits before
-  closing, the color of the selected tab, and whether the edge shows the task
-  badge. Leaving the popover sideways, back toward the note, always closes it at
-  once.
-- Configurable side (left/right), open trigger (hover/click) and heading-level
-  range. The heading-level range doesn't apply to tasks.
+## 👀 预览 / Preview
 
-## Settings
+![](assets/README/2026-08-08_00-49-28.gif)
 
-| Setting | Default | What it does |
+## ✨ 新增功能 / New Features
+
+| 功能 | 描述 | 默认值 |
 | --- | --- | --- |
-| Show | Both | Surface headings, tasks, or both. |
-| Default tab | Headings | Tab that leads the tab bar and opens first; after that the last-used tab is kept. |
-| Show task checkboxes | Off | Add a checkbox to each task row to complete it from the popover. |
-| Show multiple lines | On | Wrap long rows; when off, rows are single-line and hovering shows the full text. |
-| Active tab color | *theme* | Background of the selected tab. Reset it to follow the theme. |
-| Show minimap | On | The dashed markers on the edge of the note. |
-| Minimap marker width | 100% | Scale marker length from 50% to 200%; above 100%, higher-level headings grow progressively more. |
-| Minimap vertical scale | 100% | Scale marker thickness and spacing from 50% to 200%. |
-| Show tasks in minimap | On | The open-task badge on the edge. Notes with tasks but no headings always show it. |
-| Side | Right | Which edge the TOC docks on. |
-| Open the popover on | Hover | Hover the minimap, or require a click. |
-| Close delay | 160 ms | Grace period before the popover closes once the mouse leaves it. |
-| Popover width | 264 px | Set the TOC popover width from 160 to 480 pixels. |
-| Smooth scroll | On | Animate the scroll when navigating. |
-| Scroll to heading on hover | Off | Temporarily scroll to a hovered heading and return on leave; click to navigate normally and stay there. |
-| Minimum / maximum heading level | 1 / 6 | Heading levels to include (tasks are unaffected). |
+| 中英文界面 | 目录面板和设置页支持 English / 中文切换。 | English |
+| 更干净的标题显示 | 隐藏 Markdown 反斜杠转义字符，例如 `1\.` 会显示为 `1.`。 | 始终启用 |
+| 面板固定 | 可通过顶部图钉按钮固定或取消固定目录面板。 | 未固定 |
+| 标题层级折叠 | 支持折叠/展开单个标题分支，并可一键展开或收起全部目录项。 | 全部展开 |
+| 标题搜索 | 新增搜索按钮，可快速筛选标题，并支持一键清空搜索内容。 | 关闭搜索 |
+| 面板尺寸与透明度 | 可自定义面板高度、面板背景透明度和标题文字透明度。 | 高度跟随默认值（50vh）；背景透明度 100%；文字透明度 100% |
+| 工具栏与标签栏显示控制 | 可隐藏顶部工具栏，也可隐藏标题/任务标签栏。 | 工具栏开启；标签栏开启 |
+| H1-H6 级别徽标 | 标题右侧可显示层级徽标，默认使用 Rose Pine 配色，并支持分别自定义 6 个级别的颜色。 | 开启；`#b4637a`、`#d7827e`、`#ea9d34`、`#286983`、`#907aa9`、`#575279` |
+| 徽标颜色输入规范化 | 颜色设置支持带或不带 `#` 的十六进制值，也支持 3 位十六进制值自动展开。 | 始终启用 |
+| 设置项恢复默认值 | 每个设置项都提供独立的恢复默认值按钮。 | 可用 |
+| 失焦自动隐藏 | 可选择在焦点离开 Markdown 笔记时自动隐藏目录面板。 | 关闭 |
 
-## Screenshots
 
-![Suble TOC](subtle-toc-obsidian_tasks.png)
 
-## Install (Community plugins)
+| Feature | Description | Default |
+| --- | --- | --- |
+| Bilingual UI | Switch the TOC panel and settings page between English and Chinese. | English |
+| Cleaner heading text | Markdown escape backslashes are hidden, so `1\.` is displayed as `1.`. | Always enabled |
+| Panel pinning | Pin or unpin the TOC popover from the toolbar. | Unpinned |
+| Heading tree folding | Collapse or expand individual heading branches, with an expand-all/collapse-all toolbar button. | Fully expanded |
+| Heading search | Search headings directly from the popover and clear the query with one click. | Search closed |
+| Panel size and opacity | Customize panel height, panel background opacity, and heading text opacity. | Default height (50vh); background opacity 100%; text opacity 100% |
+| Toolbar and tab-bar visibility | Hide the top toolbar or the Headings/Tasks tab bar when you want a cleaner panel. | Toolbar on; tab bar on |
+| H1-H6 level badges | Show heading-level badges on the right side of each heading, with Rose Pine-inspired defaults and six customizable colors. | On; `#b4637a`, `#d7827e`, `#ea9d34`, `#286983`, `#907aa9`, `#575279` |
+| Badge color normalization | Badge colors accept hex values with or without `#`, and 3-digit hex values are expanded automatically. | Always enabled |
+| Per-setting reset buttons | Every setting can be reset to its default value independently. | Available |
+| Auto-hide on blur | Optionally hide the TOC when focus moves away from the Markdown note. | Off |
 
-1. Open *Settings → Community plugins* in Obsidian.
-2. Make sure **Restricted mode** is turned off (click **Turn on community plugins** if needed).
-3. Click **Browse**, search for **Subtle TOC**, and open its page.
-4. Click **Install**, then **Enable**.
+## 📦 安装 / Installation
 
-## Install (BRAT — beta / before it's in the directory)
+### 从 Obsidian 社区插件安装（推荐）/ From Obsidian Community Plugins (recommended)
 
-If the plugin isn't in the official Community plugins directory yet, you can
-install it with [BRAT](https://github.com/TfTHacker/obsidian42-brat):
+1. 打开 Obsidian -> **设置 -> 第三方插件**。
+2. 点击 **浏览**，搜索 **Subtle TOC Plus**。
+3. 点击 **安装**，然后 **启用**。
 
-1. Install **BRAT** from *Settings → Community plugins → Browse* and enable it.
-2. Open the command palette and run **BRAT: Add a beta plugin for testing**.
-3. Paste the repository URL:
-   ```
-   https://github.com/xupisco/obisidian-suble-toc
-   ```
-4. Confirm — BRAT downloads the latest release and keeps it up to date.
-5. Enable **Subtle TOC** in *Settings → Community plugins*.
+---
 
-## Install (manual / for development)
+1. Open Obsidian -> **Settings -> Community plugins**.
+2. Click **Browse** and search for **Subtle TOC Plus**.
+3. Click **Install**, then **Enable**.
 
-1. Build the plugin:
-   ```bash
-   npm install
-   npm run build      # produces main.js
-   ```
-2. Copy `main.js`, `manifest.json` and `styles.css` into your vault at:
-   ```
-   <vault>/.obsidian/plugins/subtle-toc/
-   ```
-3. Reload Obsidian and enable **Subtle TOC** in *Settings → Community plugins*.
+### 从 GitHub Releases 安装 / From GitHub Releases
 
-## Develop
+1. 从最新 [release](../../releases) 下载 `main.js`、`styles.css` 和 `manifest.json`。
+2. 放入 `<vault>/.obsidian/plugins/subtle-toc-plus`。
+3. 重启 Obsidian，在 **设置 -> 第三方插件** 中启用 **Subtle TOC Plus**。
 
-```bash
-npm install
-npm run dev          # esbuild watch -> rebuilds main.js on change
-```
+---
 
-Point the output at a test vault by symlinking the plugin folder, or copy the
-three files after each build. Use the "Toggle TOC popover" command (assign a
-hotkey) to open/close the outline from the keyboard.
+1. Download `main.js`, `styles.css`, and `manifest.json` from the latest [release](../../releases).
+2. Place them in `<vault>/.obsidian/plugins/subtle-toc-plus`.
+3. Restart Obsidian, then enable **Subtle TOC Plus** from **Settings -> Community plugins**.
 
-## How it works
+## 🚀 使用 / Usage
 
-- Headings and tasks both come from Obsidian's `metadataCache`, so the outline
-  stays in sync as you type. Tasks are the open list items (`- [ ]`) of the active
-  note only.
-- Active-heading detection uses CodeMirror 6 line geometry in Editing mode and
-  the preview scroll position in Reading mode. Clicking a task navigates to it the
-  same way headings do.
-- Completing a task edits the note through the editor in Editing mode (so it's
-  undoable) and writes the file directly in Reading mode.
-- One overlay instance is bound to the active Markdown view at a time and rebuilt
-  when you switch notes, panes or modes.
+1. 启用插件后，打开包含标题或待办任务的 Markdown 笔记。
+2. 在笔记边缘找到细线式目录缩略图；根据设置，悬停或点击即可打开目录面板。
+3. 点击标题可跳转到对应位置；如果开启任务显示，也可以在面板中查看未完成任务。
+4. 使用顶部按钮搜索标题、固定面板，或一键展开/收起目录层级。
+5. 在插件设置中调整语言、显示内容、默认标签页、面板尺寸、透明度、工具栏/标签栏、标题级别范围和 H1-H6 徽标颜色。
 
-## License
+---
 
-MIT
+1. Enable the plugin, then open a Markdown note with headings or open tasks.
+2. Find the subtle minimap on the edge of the note; hover or click it to open the TOC popover, depending on your trigger setting.
+3. Click a heading to jump to it. If task display is enabled, open tasks are also available in the popover.
+4. Use the toolbar to search headings, pin the panel, or expand/collapse the heading tree.
+5. Open the plugin settings to adjust language, displayed content, default tab, panel size, opacity, toolbar/tab-bar visibility, heading level range, and H1-H6 badge colors.
