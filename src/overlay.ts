@@ -283,6 +283,7 @@ export class TocOverlay {
 	private isPinned = false;
 	private isSearchActive = false;
 	private searchQuery = "";
+	private keepOpenUntilSearchReenter = false;
 
 	/** Tree-collapse state: which headings are parents, their descendants, and
 	 *  which parent headings are currently expanded. Headings IN this set show
@@ -537,7 +538,10 @@ export class TocOverlay {
 			el.addEventListener("mouseleave", () => this.scheduleClose());
 		}
 
-		this.popoverEl.addEventListener("mouseenter", () => this.cancelClose());
+		this.popoverEl.addEventListener("mouseenter", () => {
+			this.cancelClose();
+			this.keepOpenUntilSearchReenter = false;
+		});
 		this.popoverEl.addEventListener("mouseleave", (e) => this.onPopoverLeave(e));
 	}
 
@@ -545,7 +549,7 @@ export class TocOverlay {
 	 *  once. Any other exit keeps the grace period, so the popover still survives
 	 *  the cursor falling outside when a shorter tab shrinks it. */
 	private onPopoverLeave(e: MouseEvent): void {
-		if (this.isPinned || this.isSearchActive) return;
+		if (this.isPinned || this.keepOpenUntilSearchReenter) return;
 		const rect = this.popoverEl.getBoundingClientRect();
 		const towardNote =
 			this.settings.side === "left" ? e.clientX > rect.right : e.clientX < rect.left;
@@ -644,8 +648,10 @@ export class TocOverlay {
 
 	private setSearchActive(active: boolean, focus = false): void {
 		this.isSearchActive = active;
-		if (active) this.cancelClose();
-		if (!active) this.searchQuery = "";
+		if (!active) {
+			this.searchQuery = "";
+			this.keepOpenUntilSearchReenter = false;
+		}
 		this.syncSearchChrome();
 		if (active) {
 			this.selectTab("headings");
@@ -661,6 +667,8 @@ export class TocOverlay {
 
 	private setSearchQuery(query: string): void {
 		this.searchQuery = query;
+		this.keepOpenUntilSearchReenter = query.length > 0;
+		if (this.keepOpenUntilSearchReenter) this.cancelClose();
 		this.syncSearchChrome();
 		this.updateItemVisibility();
 	}
@@ -1281,7 +1289,7 @@ export class TocOverlay {
 	}
 
 	private scheduleClose(): void {
-		if (this.isPinned || this.isSearchActive) return;
+		if (this.isPinned || this.keepOpenUntilSearchReenter) return;
 		this.cancelClose();
 		this.closeTimer = window.setTimeout(() => this.close(), this.settings.closeDelay);
 	}
