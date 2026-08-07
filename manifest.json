@@ -1,10 +1,10 @@
 {
-	"id": "subtle-toc",
-	"name": "Subtle TOC",
+	"id": "subtle-toc-plus",
+	"name": "Subtle TOC Plus",
 	"version": "0.5.0",
 	"minAppVersion": "1.4.0",
-	"description": "A floating, Capacities-style table of contents: an edge minimap for headings with active-heading tracking and click-to-scroll, plus an open-tasks tab with a live count and optional one-click completion.",
-	"author": "Leandro Voltolino",
-	"authorUrl": "https://github.com/xupisco/obisidian-suble-toc",
+	"description": "EN: Enhanced Subtle TOC fork with search, tag filter, H1-H6 badges, color/opacity customization, panel pinning and more. | 中文: Subtle TOC 增强版，支持搜索、标签过滤、层级徽标、颜色/透明度自定义与面板固定等功能。",
+	"author": "Xzhi & Leandro Voltolino",
+	"authorUrl": "https://github.com/GitHub-Xzhi",
 	"isDesktopOnly": true
 }
