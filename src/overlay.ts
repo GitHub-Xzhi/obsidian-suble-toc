@@ -546,7 +546,7 @@ export class TocOverlay {
 	 *  once. Any other exit keeps the grace period, so the popover still survives
 	 *  the cursor falling outside when a shorter tab shrinks it. */
 	private onPopoverLeave(e: MouseEvent): void {
-		if (this.isPinned) return;
+		if (this.isPinned || this.isSearchActive) return;
 		const rect = this.popoverEl.getBoundingClientRect();
 		const towardNote =
 			this.settings.side === "left" ? e.clientX > rect.right : e.clientX < rect.left;
@@ -645,6 +645,7 @@ export class TocOverlay {
 
 	private setSearchActive(active: boolean, focus = false): void {
 		this.isSearchActive = active;
+		if (active) this.cancelClose();
 		if (!active) this.searchQuery = "";
 		this.syncSearchChrome();
 		if (active) {
@@ -1277,7 +1278,7 @@ export class TocOverlay {
 	}
 
 	private scheduleClose(): void {
-		if (this.isPinned) return;
+		if (this.isPinned || this.isSearchActive) return;
 		this.cancelClose();
 		this.closeTimer = window.setTimeout(() => this.close(), this.settings.closeDelay);
 	}
