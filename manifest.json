@@ -1,7 +1,7 @@
 {
 	"id": "subtle-toc-plus",
 	"name": "Subtle TOC Plus",
-	"version": "0.5.0",
+	"version": "1.0.0",
 	"minAppVersion": "1.4.0",
 	"description": "EN: Enhanced Subtle TOC fork with search, tag filter, H1-H6 badges, color/opacity customization, panel pinning and more. | 中文: Subtle TOC 增强版，支持搜索、标签过滤、层级徽标、颜色/透明度自定义与面板固定等功能。",
 	"author": "Xzhi & Leandro Voltolino",
