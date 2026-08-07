@@ -450,8 +450,7 @@ export class TocOverlay {
 		this.searchInputEl.addEventListener("mousedown", (e) => e.stopPropagation());
 		this.searchInputEl.addEventListener("click", (e) => e.stopPropagation());
 		this.searchInputEl.addEventListener("input", () => {
-			this.searchQuery = this.searchInputEl.value;
-			this.updateItemVisibility();
+			this.setSearchQuery(this.searchInputEl.value);
 		});
 		this.searchInputEl.addEventListener("keydown", (e) => this.handleSearchKeydown(e));
 		this.clearSearchBtnEl = searchRow.createDiv({ cls: "subtle-toc-search-clear-btn is-hidden" });
@@ -660,10 +659,14 @@ export class TocOverlay {
 		this.updateItemVisibility();
 	}
 
-	private clearSearch(focus = false): void {
-		this.searchQuery = "";
+	private setSearchQuery(query: string): void {
+		this.searchQuery = query;
 		this.syncSearchChrome();
 		this.updateItemVisibility();
+	}
+
+	private clearSearch(focus = false): void {
+		this.setSearchQuery("");
 		if (focus) requestAnimationFrame(() => this.searchInputEl?.focus());
 	}
 
