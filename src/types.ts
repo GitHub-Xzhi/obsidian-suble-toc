@@ -42,6 +42,8 @@ export interface SubtleTocSettings {
 	side: TocSide;
 	/** Open the popover on hover or only on click. */
 	openTrigger: TocTrigger;
+	/** Hide the TOC when focus moves away from the Markdown pane. */
+	autoHideOnBlur: boolean;
 	/** Grace period, in ms, before the popover closes once the mouse leaves it. */
 	closeDelay: number;
 	/** Width of the TOC popover in CSS pixels. */
@@ -86,6 +88,7 @@ export const DEFAULT_SETTINGS: SubtleTocSettings = {
 	showTasksInMinimap: true,
 	side: "right",
 	openTrigger: "hover",
+	autoHideOnBlur: false,
 	closeDelay: 160,
 	popoverWidth: 264,
 	panelHeight: 0,

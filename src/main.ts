@@ -43,11 +43,18 @@ export default class SubtleTocPlugin extends Plugin {
 	private sync(): void {
 		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
 
+		if (!view) {
+			if (this.settings.autoHideOnBlur || !this.overlay?.view.containerEl.isConnected) {
+				this.teardownOverlay();
+			} else {
+				this.overlay.refresh();
+			}
+			return;
+		}
+
 		if (this.overlay && this.overlay.view !== view) {
 			this.teardownOverlay();
 		}
-
-		if (!view) return;
 
 		if (!this.overlay) {
 			this.overlay = new TocOverlay(this, view);

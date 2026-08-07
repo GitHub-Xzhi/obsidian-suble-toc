@@ -26,6 +26,7 @@ interface SettingsLocale {
 	sideOpts: { right: string; left: string };
 	openTrigger: [string, string];
 	openTriggerOpts: { hover: string; click: string };
+	autoHideOnBlur: [string, string];
 	closeDelay: [string, string];
 	popoverWidth: [string, string];
 	panelHeight: [string, string];
@@ -62,6 +63,7 @@ const EN: SettingsLocale = {
 	sideOpts: { right: "Right", left: "Left" },
 	openTrigger: ["Open the popover on", "Hover over the minimap, or require a click to open."],
 	openTriggerOpts: { hover: "Hover", click: "Click" },
+	autoHideOnBlur: ["Auto-hide outside note", "Hide the TOC when focus moves away from the Markdown note, such as clicking a sidebar."],
 	closeDelay: ["Close delay", "How long the popover waits before closing after the mouse leaves it, in milliseconds. Raise it if it closes on you while switching tabs."],
 	popoverWidth: ["Popover width", "Set the width of the TOC popover in pixels (264 is the default)."],
 	panelHeight: ["Panel height", "Custom max height of the TOC popover in pixels. Set to 0 to use the default (50vh)."],
@@ -98,6 +100,7 @@ const ZH: SettingsLocale = {
 	sideOpts: { right: "右侧", left: "左侧" },
 	openTrigger: ["打开方式", "悬停在缩略图上打开，或需要点击打开。"],
 	openTriggerOpts: { hover: "悬停", click: "点击" },
+	autoHideOnBlur: ["失焦时自动隐藏", "当焦点离开 Markdown 笔记（例如点击侧边栏）时隐藏 TOC 面板。"],
 	closeDelay: ["关闭延迟", "鼠标离开弹出面板后等待关闭的时间（毫秒）。如果在切换标签时面板关闭太快，请增大此值。"],
 	popoverWidth: ["面板宽度", "设置 TOC 弹出面板的宽度（像素），默认 264。"],
 	panelHeight: ["面板高度", "自定义 TOC 弹出面板的最大高度（像素）。设为 0 使用默认值（50vh）。"],
@@ -360,6 +363,18 @@ export class SubtleTocSettingTab extends PluginSettingTab {
 					}),
 			);
 		this.addResetBtn(triggerSetting, "openTrigger");
+
+		// -- Auto-hide outside note ---------------------------------------------
+		const autoHideSetting = new Setting(containerEl)
+			.setName(t.autoHideOnBlur[0])
+			.setDesc(t.autoHideOnBlur[1])
+			.addToggle((toggle) =>
+				toggle.setValue(this.plugin.settings.autoHideOnBlur).onChange(async (v) => {
+					this.plugin.settings.autoHideOnBlur = v;
+					await this.plugin.saveAndRefresh();
+				}),
+			);
+		this.addResetBtn(autoHideSetting, "autoHideOnBlur");
 
 		// -- Close delay -------------------------------------------------------
 		const closeSetting = new Setting(containerEl)
